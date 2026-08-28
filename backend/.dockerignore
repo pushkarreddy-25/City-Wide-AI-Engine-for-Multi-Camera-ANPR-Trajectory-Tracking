@@ -1,0 +1,39 @@
+# Files that must never reach the image.
+#
+# `COPY . .` in the Dockerfile is deliberately broad, which makes this list the
+# only thing standing between the build context and the registry. Two of these
+# matter for more than image size: the SQLite file holds real plate-to-location
+# history, and a local `.env` holds the write key.
+
+# Local virtualenvs — often built for a different OS, always huge.
+.venv/
+venv/
+env/
+
+# Runtime database: plate reads, journeys, violations. Not build input.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Secrets. ANPR_API_KEY and datastore passwords are injected at run time.
+.env
+.env.*
+!.env.example
+
+# Build/test detritus.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Editor and VCS noise.
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,17 @@
+# ANPR Traffic Intelligence Engine — core runtime
+#
+# This is the minimal set needed to run the engine on simulated data with
+# SQLite + in-memory cache (the "runs anywhere" default). Everything the demo
+# needs — REST API, WebSocket live feed, CSV export — works with just these.
+#
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#   uvicorn api.main:app --reload
+#
+# For PDF export, a Redis cache, or PostgreSQL, see requirements-optional.txt.
+
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29        # [standard] bundles the websockets impl used by /ws
+pydantic>=2.6,<3.0
+SQLAlchemy>=2.0,<3.0
+PyYAML>=6.0

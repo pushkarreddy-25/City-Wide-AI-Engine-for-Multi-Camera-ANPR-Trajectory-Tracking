@@ -1,0 +1,34 @@
+# Traffic simulation configuration.
+#
+# The simulator stands in for real RTSP camera feeds: it drives a fleet of
+# synthetic vehicles across the camera network, producing detections that flow
+# through the exact same ANPR -> tracking -> linking -> violation pipeline used
+# in production. Disable it (or set engine values to real in anpr_config.yaml)
+# when connecting real cameras.
+
+simulation:
+  enabled: true
+  tick_seconds: 1.0          # wall-clock seconds between simulation ticks
+  fleet_size: 80             # number of distinct vehicles that exist in the city
+  max_active: 22             # vehicles on the road simultaneously
+  spawn_probability: 0.7     # chance to admit a new vehicle each tick
+  min_speed_kmh: 15
+  max_speed_kmh: 65
+  obscured_fraction: 0.18    # fraction of plate reads that are low-confidence
+  ocr_confidence_clear: [0.82, 0.98]
+  ocr_confidence_obscured: [0.52, 0.78]
+
+# On startup, pre-generate this many hours of historical detections,
+# trajectories and violations so reports and heatmaps are populated for the demo.
+history:
+  seed_enabled: true
+  hours: 24
+  vehicles_per_hour: 180
+
+violations:
+  signal_cycle_seconds: 60           # red/green cycle length per intersection
+  red_fraction: 0.4                  # portion of the cycle that is RED
+  red_light_probability: 0.06        # chance a vehicle runs a red when it can
+  lane_violation_probability: 0.05
+  speed_violation_probability: 0.09
+  speed_over_limit_kmh: [8, 35]      # how far over the limit speeders go

@@ -1,0 +1,9 @@
+# Development / test dependencies.
+#
+#   pip install -r requirements-dev.txt
+#   pytest
+
+-r requirements.txt
+
+pytest>=8.0
+httpx>=0.27              # required by FastAPI's TestClient (starlette)

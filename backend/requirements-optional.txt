@@ -1,0 +1,14 @@
+# Optional dependencies — install only the ones you need. The application is
+# written so each of these is imported lazily: without them the demo still runs,
+# it just skips the corresponding feature (or falls back to the mock/default).
+#
+#   pip install -r requirements-optional.txt
+
+reportlab>=4.0            # PDF violation reports  (GET /api/violations/export.pdf)
+                          #   without it, that endpoint returns 503; CSV export still works.
+
+redis>=5.0               # Redis cache backend    (set CACHE_BACKEND=redis, REDIS_URL=...)
+                          #   without it, the in-memory cache is used.
+
+psycopg2-binary>=2.9     # PostgreSQL driver       (set DATABASE_URL=postgresql+psycopg2://...)
+                          #   without it, SQLite is used.

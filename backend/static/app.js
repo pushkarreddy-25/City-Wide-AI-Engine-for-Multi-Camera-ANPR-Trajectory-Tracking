@@ -1,0 +1,800 @@
+/* ============================================================
+   ANPR · Traffic Intelligence — dashboard client
+   Talks to the FastAPI backend: WS /ws/vehicles for the live
+   snapshot, REST for search / violations / reports / resolve.
+   No build step, no framework — vanilla ES modules-free JS.
+   ============================================================ */
+(() => {
+  "use strict";
+
+  // ---- tiny DOM helpers ----------------------------------------------------
+  const $  = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+
+  /* Every value that reaches an innerHTML template goes through one of these.
+     Plates, camera names and notes all originate outside this file — from OCR,
+     from config, from another operator's typing — so none of them may be
+     trusted to be inert markup. */
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  /** Coerce to a finite number, for values interpolated into markup or CSS. */
+  const num = (v, fallback = 0) => { const n = Number(v); return Number.isFinite(n) ? n : fallback; };
+
+  const LEVELS = new Set(["low", "medium", "high"]);
+  /** Clamp a severity/congestion level to the three we style. */
+  const level = (v) => (LEVELS.has(v) ? v : "low");
+
+  const TYPE_LABEL = { red_light: "Red light", over_speed: "Over speed", wrong_lane: "Wrong lane", speeding: "Over speed" };
+  const TYPE_COLOR = { red_light: "#ff3b47", over_speed: "#ffb020", wrong_lane: "#00e5d0", speeding: "#ffb020" };
+  const CHART_INK = "#7f939f", CHART_GRID = "#18242f", CHART_ACCENT = "#00e5d0", CHART_BG = "#0a1017";
+  const prettyType = (t) => TYPE_LABEL[t] || String(t || "violation").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  /** Only http(s) URLs may be used as an image source — never `javascript:`. */
+  function safeImageUrl(raw) {
+    if (typeof raw !== "string" || !raw.trim()) return "";
+    try {
+      const u = new URL(raw, location.origin);
+      return (u.protocol === "http:" || u.protocol === "https:") ? u.href : "";
+    } catch { return ""; }
+  }
+
+  const fmtTime = (ts) => {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    if (isNaN(d)) return String(ts);
+    return d.toLocaleTimeString("en-GB", { hour12: false });
+  };
+  const fmtDateTime = (ts) => {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    if (isNaN(d)) return String(ts);
+    return d.toLocaleString("en-GB", { hour12: false, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    if (!res.ok) { const e = new Error(await errorDetail(res)); e.status = res.status; throw e; }
+    const ct = res.headers.get("content-type") || "";
+    return ct.includes("application/json") ? res.json() : res.text();
+  }
+
+  /** Prefer the server's own explanation over a bare status code. */
+  async function errorDetail(res) {
+    try {
+      const body = await res.json();
+      if (body && typeof body.detail === "string") return body.detail;
+    } catch { /* not JSON — fall through */ }
+    return `HTTP ${res.status}`;
+  }
+
+  /* ---- write credential -----------------------------------------------------
+     When the API is started with ANPR_API_KEY set (which the public-tunnel
+     script does automatically), mutations need that key in an X-API-Key header.
+     It is held in sessionStorage rather than localStorage so it disappears when
+     the tab closes and never touches disk. */
+  const KEY_STORE = "anpr.write_key";
+  function writeKey() {
+    try { const v = sessionStorage.getItem(KEY_STORE); if (v) return v; } catch { /* blocked */ }
+    return state.writeKey || "";
+  }
+  function rememberKey(k) {
+    state.writeKey = k;
+    try { sessionStorage.setItem(KEY_STORE, k); } catch { /* blocked; in-memory only */ }
+  }
+  function forgetKey() {
+    state.writeKey = "";
+    try { sessionStorage.removeItem(KEY_STORE); } catch { /* blocked */ }
+  }
+  function writeHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    const key = writeKey();
+    if (key) headers["X-API-Key"] = key;
+    return headers;
+  }
+
+  // ---- shared state --------------------------------------------------------
+  const state = {
+    cameras: [],
+    camById: {},
+    feed: new Map(),          // violation_id -> violation (dashboard live feed)
+    seenAlerts: new Set(),    // ids we've already toasted
+    map: null, camLayer: null, vehLayer: null, camMarkers: {},
+    journeyMap: null, journeyLayer: null,
+    charts: {},
+    started: false,
+    writeProtected: false,    // server wants a key before it accepts a write
+    readOnly: false,          // server refuses every write
+    writeKey: "",             // fallback when sessionStorage is unavailable
+  };
+
+  /* ========================================================================
+     Third-party library loading
+     Leaflet and Chart.js load from a CDN in index.html. If that source is
+     blocked (corporate proxy, conference wifi, offline demo), retry from a
+     mirror before giving up — a blank map is the worst way to find out.
+     Vendor them into backend/static/vendor/ for a fully offline demo.
+     ==================================================================== */
+  const LIB_SOURCES = {
+    L: [
+      "/vendor/leaflet.js",
+      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+    ],
+    Chart: [
+      "/vendor/chart.umd.min.js",
+      "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
+    ],
+  };
+
+  function loadScript(src) {
+    return new Promise(resolve => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = false;
+      s.onload = () => resolve(true);
+      s.onerror = () => { s.remove(); resolve(false); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /** Resolve true once `globalName` exists, trying each fallback source in turn. */
+  async function ensureLib(globalName) {
+    if (window[globalName]) return true;
+    for (const src of LIB_SOURCES[globalName] || []) {
+      await loadScript(src);
+      if (window[globalName]) return true;
+    }
+    return false;
+  }
+
+  function mapUnavailable(containerId, label) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    box.innerHTML =
+      `<div class="map-down">
+         <b>${esc(label)} unavailable</b>
+         <span>The map library could not be loaded from the network.</span>
+         <span class="dim">Run <code>scripts\\vendor-assets.ps1</code> once to bundle it locally, then reload.</span>
+       </div>`;
+  }
+
+  /* ========================================================================
+     View router
+     ==================================================================== */
+  function initNav() {
+    $$(".nav-item").forEach(btn => {
+      btn.addEventListener("click", () => showView(btn.dataset.nav));
+    });
+  }
+  function showView(name) {
+    $$(".nav-item").forEach(b => b.setAttribute("aria-current", String(b.dataset.nav === name)));
+    $$("[data-view-panel]").forEach(p => { p.hidden = (p.dataset.viewPanel !== name); });
+    document.body.dataset.view = name;
+    if (name === "dashboard" && state.map) setTimeout(() => state.map.invalidateSize(), 60);
+    if (name === "violations") loadViolations();
+    if (name === "reports") loadActiveReport();
+  }
+
+  /* ========================================================================
+     Map (Leaflet) — camera nodes coloured by live congestion
+     ==================================================================== */
+  const hasLeaflet = () => typeof L !== "undefined";
+
+  function baseTiles() {
+    return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd", maxZoom: 20,
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+    });
+  }
+
+  function camIcon(count, lvl) {
+    const n = Math.max(0, Math.round(num(count)));
+    const size = Math.max(30, Math.min(52, 30 + n * 1.6));
+    return L.divIcon({
+      className: "",
+      html: `<div class="cam-node" data-level="${level(lvl)}" style="width:${size}px;height:${size}px">
+               <div class="cam-ring"><span class="cam-count">${n}</span></div>
+             </div>`,
+      iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+    });
+  }
+
+  function initMap() {
+    if (state.map) return;
+    if (!hasLeaflet()) { mapUnavailable("map", "Live operations map"); return; }
+    const map = L.map("map", { zoomControl: true, attributionControl: true }).setView([21.1458, 79.0882], 13);
+    baseTiles().addTo(map);
+    state.camLayer = L.layerGroup().addTo(map);
+    state.vehLayer = L.layerGroup().addTo(map);
+    state.map = map;
+
+    const pts = [];
+    state.cameras.forEach(c => {
+      const lat = c.position?.lat, lng = c.position?.lng;
+      if (lat == null || lng == null) return;
+      pts.push([lat, lng]);
+      const m = L.marker([lat, lng], { icon: camIcon(0, "low") }).addTo(state.camLayer);
+      m.bindPopup(`<div class="popup-cam-name">${esc(c.name)}</div>
+        <div class="popup-row">Speed limit ${esc(c.speed_limit_kmh)} km/h · ${esc(c.lanes?.length ?? c.lanes ?? "—")} lanes</div>
+        <div class="popup-row" id="pop-${esc(c.id)}">No congestion data yet</div>`);
+      state.camMarkers[c.id] = m;
+    });
+    if (pts.length) map.fitBounds(pts, { padding: [50, 50] });
+  }
+
+  function updateCongestion(cells) {
+    if (!state.map || !cells) return;
+    const byId = {};
+    cells.forEach(c => { byId[c.camera_id] = c; });
+    Object.entries(state.camMarkers).forEach(([id, marker]) => {
+      const cell = byId[id];
+      const count = num(cell?.vehicle_count);
+      const lvl = level(cell?.level);
+      marker.setIcon(camIcon(count, lvl));
+      const pop = document.getElementById(`pop-${id}`);
+      if (pop) pop.textContent = `${count} vehicles · ${lvl} congestion`;
+    });
+  }
+
+  function updateVehicleDots(vehicles) {
+    if (!state.map || !state.vehLayer) return;
+    state.vehLayer.clearLayers();
+    if (!$("#toggle-vehicles")?.checked) return;
+    vehicles.slice(0, 120).forEach(v => {
+      const lat = v.position?.lat, lng = v.position?.lng;
+      if (lat == null || lng == null) return;
+      // jitter around the camera so co-located vehicles are individually visible
+      const j = 0.0016;
+      const dot = L.marker([lat + (Math.random() - 0.5) * j, lng + (Math.random() - 0.5) * j], {
+        icon: L.divIcon({ className: "", html: `<div class="veh-dot"></div>`, iconSize: [8, 8], iconAnchor: [4, 4] }),
+        interactive: false,
+      });
+      state.vehLayer.addLayer(dot);
+    });
+  }
+
+  /* ========================================================================
+     Live WebSocket
+     ==================================================================== */
+  function setConn(stateName, label) {
+    const c = $("#conn"); if (!c) return;
+    c.dataset.state = stateName; $("#conn-label").textContent = label;
+  }
+
+  function connectWS() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const url = `${proto}://${location.host}/ws/vehicles`;
+    let ws;
+    try { ws = new WebSocket(url); } catch { scheduleReconnect(); return; }
+    setConn("connecting", "connecting");
+
+    ws.onopen = () => setConn("live", "live");
+    ws.onclose = () => { setConn("down", "reconnecting"); scheduleReconnect(); };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+    ws.onmessage = (ev) => {
+      let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+      handleSnapshot(msg);
+    };
+  }
+  let reconnectT = null;
+  function scheduleReconnect() {
+    if (reconnectT) return;
+    reconnectT = setTimeout(() => { reconnectT = null; connectWS(); }, 2500);
+  }
+
+  function handleSnapshot(msg) {
+    const vehicles = msg.vehicles || [];
+    const alerts = msg.alerts || [];
+    const congestion = msg.congestion || [];
+    const stats = msg.stats || {};
+
+    // header
+    if (stats.sim_time != null) $("#sim-clock").textContent = fmtTime(stats.sim_time);
+    if (stats.fleet_size != null) $("#fleet-size").textContent = stats.fleet_size;
+
+    // stat cards
+    setStat("#stat-vehicles", stats.active_vehicles ?? vehicles.length);
+    updateSpeedStat(vehicles);
+    updateCongestionStat(congestion);
+
+    // map
+    updateCongestion(congestion);
+    updateVehicleDots(vehicles);
+
+    // violations feed
+    ingestAlerts(alerts);
+  }
+
+  function setStat(sel, val) {
+    const num = $(`${sel} .stat-num`); if (!num) return;
+    const next = String(val);
+    if (num.textContent !== next) { num.textContent = next; num.classList.remove("flash"); void num.offsetWidth; num.classList.add("flash"); }
+  }
+
+  function updateSpeedStat(vehicles) {
+    const speeds = vehicles.map(v => v.speed_kmh).filter(s => typeof s === "number");
+    const avg = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : "—";
+    setStat("#stat-speed", avg);
+  }
+
+  function updateCongestionStat(cells) {
+    if (!cells.length) return;
+    const w = { low: 0.15, medium: 0.55, high: 1 };
+    const idx = Math.round((cells.reduce((a, c) => a + (w[c.level] ?? 0.15), 0) / cells.length) * 100);
+    setStat("#stat-congestion", idx);
+    const band = idx >= 66 ? "high" : idx >= 33 ? "medium" : "low";
+    const label = band === "high" ? "heavy" : band === "medium" ? "moderate" : "free-flowing";
+    const pill = $("#stat-congestion .pill");
+    if (pill) { pill.dataset.level = band; pill.textContent = label; }
+  }
+
+  /* ========================================================================
+     Live violation feed + toasts
+     ==================================================================== */
+  function ingestAlerts(alerts) {
+    let fresh = 0;
+    alerts.forEach(v => {
+      if (!v || !v.violation_id) return;
+      const isNew = !state.feed.has(v.violation_id);
+      state.feed.set(v.violation_id, v);
+      if (isNew && !state.seenAlerts.has(v.violation_id)) {
+        state.seenAlerts.add(v.violation_id);
+        if (state.started) { toast(v); fresh++; }
+      }
+    });
+    state.started = true;
+    if (fresh || alerts.length) renderFeed();
+  }
+
+  function renderFeed() {
+    const list = $("#feed"); if (!list) return;
+    const items = Array.from(state.feed.values())
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 40);
+
+    const openUnresolved = items.filter(v => !v.resolved);
+    setStat("#stat-violations", openUnresolved.length);
+    const high = openUnresolved.filter(v => v.severity === "high").length;
+    const hi = $("#stat-violations .sev-high"); if (hi) hi.textContent = `${high} high`;
+    const badge = $("#nav-viol-count");
+    if (badge) { badge.hidden = openUnresolved.length === 0; badge.textContent = openUnresolved.length; }
+    $("#feed-count").textContent = openUnresolved.length;
+
+    if (!items.length) { list.innerHTML = `<li class="feed-empty">Waiting for the engine to surface violations…</li>`; return; }
+    list.innerHTML = "";
+    items.forEach(v => {
+      const li = el("li", "feed-item");
+      li.dataset.sev = level(v.severity);
+      li.innerHTML = `
+        <div class="feed-top">
+          <span class="feed-type">${esc(prettyType(v.type))}</span>
+          <span class="feed-time">${esc(fmtTime(v.timestamp))}</span>
+        </div>
+        <div class="feed-mid">
+          <span class="plate ${v.plate ? "" : "low"}">${esc(v.plate || "UNREAD")}</span>
+          <span class="sev ${level(v.severity)}">${level(v.severity)}</span>
+        </div>
+        <div class="feed-cam">${esc(v.camera_name || v.camera_id || "")}</div>`;
+      li.addEventListener("click", () => openModal(v));
+      list.appendChild(li);
+    });
+  }
+
+  const toastStack = () => $("#toasts");
+  function toast(v) {
+    const t = el("div", "toast");
+    t.dataset.sev = level(v.severity);
+    t.innerHTML = `<div class="toast-title"><span class="sev ${level(v.severity)}">${level(v.severity)}</span>${esc(prettyType(v.type))}</div>
+      <div class="toast-body"><span class="plate">${esc(v.plate || "UNREAD")}</span> · ${esc(v.camera_name || v.camera_id || "")}</div>`;
+    t.addEventListener("click", () => { openModal(v); dismiss(t); });
+    toastStack().appendChild(t);
+    const timer = setTimeout(() => dismiss(t), 8000);
+    function dismiss(node) { clearTimeout(timer); node.classList.add("out"); setTimeout(() => node.remove(), 300); }
+    // keep at most 4 toasts
+    while (toastStack().children.length > 4) toastStack().firstChild.remove();
+  }
+
+  /* ========================================================================
+     Violation detail modal + resolve
+     ==================================================================== */
+  function openModal(v) {
+    const body = $("#modal-body");
+    const detail = detailLine(v);
+    const evidence = safeImageUrl(v.evidence_image_url);
+    const confidence = (v.confidence != null && Number.isFinite(Number(v.confidence)))
+      ? Math.round(Number(v.confidence) * 100) + "%" : "—";
+    body.innerHTML = `
+      <dl class="detail-grid">
+        <dt>Type</dt><dd>${esc(prettyType(v.type))}</dd>
+        <dt>Plate</dt><dd><span class="plate">${esc(v.plate || "UNREAD")}</span></dd>
+        <dt>Camera</dt><dd>${esc(v.camera_name || v.camera_id || "—")}</dd>
+        <dt>Time</dt><dd class="mono">${esc(fmtDateTime(v.timestamp))}</dd>
+        <dt>Severity</dt><dd><span class="sev ${level(v.severity)}">${level(v.severity)}</span></dd>
+        ${detail ? `<dt>Detail</dt><dd>${esc(detail)}</dd>` : ""}
+        <dt>Confidence</dt><dd class="mono">${confidence}</dd>
+        <dt>Status</dt><dd>${v.resolved ? '<span class="resolved-tag">✓ Resolved</span>' : "Open"}</dd>
+      </dl>
+      <div class="evidence" id="evidence-box">${evidence ? ""
+        : "◎ Evidence frame captured at detection<br>(image pipeline stub in simulation mode)"}</div>
+      ${v.resolved
+        ? (v.notes ? `<p class="dim">Notes: ${esc(v.notes)}</p>` : "")
+        : state.readOnly
+          ? `<p class="modal-note warn">This deployment is read-only — violations cannot be resolved from here.</p>`
+          : `<input class="notes-input" id="resolve-notes" maxlength="500" placeholder="Resolution notes (optional)…" />
+             ${state.writeProtected && !writeKey()
+               ? `<input class="notes-input" id="resolve-key" type="password" autocomplete="off" placeholder="Operator API key" />`
+               : ""}
+             <div class="modal-actions">
+               <button class="btn" id="modal-cancel">Cancel</button>
+               <button class="btn btn-primary" id="modal-resolve">Mark resolved</button>
+             </div>
+             <p class="modal-note" id="resolve-note" hidden></p>`}`;
+    if (evidence) mountEvidence($("#evidence-box"), evidence);
+    if (!v.resolved && !state.readOnly) {
+      $("#modal-cancel").addEventListener("click", closeModal);
+      $("#modal-resolve").addEventListener("click", () => resolveViolation(v));
+    }
+    $("#modal").hidden = false;
+  }
+  function closeModal() { $("#modal").hidden = true; }
+
+  /** Attach the evidence frame via the DOM so the error handler needs no
+      inline `onerror` — that would have forced 'unsafe-inline' into script-src. */
+  function mountEvidence(box, url) {
+    if (!box) return;
+    const img = document.createElement("img");
+    img.alt = "Violation evidence frame";
+    img.addEventListener("error", () => { box.textContent = "Evidence frame unavailable"; });
+    img.src = url;   // set last, so the listener is already in place
+    box.appendChild(img);
+  }
+
+  /** Reveal a key field after the server has told us one is required. */
+  function ensureKeyField() {
+    const existing = $("#resolve-key");
+    if (existing) return existing;
+    const notes = $("#resolve-notes");
+    if (!notes) return null;
+    const input = el("input", "notes-input");
+    input.id = "resolve-key";
+    input.type = "password";
+    input.autocomplete = "off";
+    input.placeholder = "Operator API key";
+    notes.insertAdjacentElement("afterend", input);
+    return input;
+  }
+
+  function resolveNote(text, warn) {
+    const note = $("#resolve-note");
+    if (!note) return;
+    note.textContent = text;
+    note.className = warn ? "modal-note warn" : "modal-note";
+    note.hidden = !text;
+  }
+
+  function detailLine(v) {
+    if (v.type === "over_speed" || v.type === "speeding")
+      return `${v.speed_kmh ?? "?"} km/h in a ${v.posted_limit ?? "?"} km/h zone`;
+    if (v.type === "red_light") return "Crossed stop line on red signal";
+    if (v.type === "wrong_lane") return "Vehicle in restricted lane";
+    return "";
+  }
+
+  async function resolveViolation(v) {
+    const notes = $("#resolve-notes")?.value || "";
+    const typedKey = ($("#resolve-key")?.value || "").trim();
+    if (typedKey) rememberKey(typedKey);
+    const btn = $("#modal-resolve"); if (btn) { btn.disabled = true; btn.textContent = "Resolving…"; }
+    resolveNote("");
+    try {
+      const updated = await api(`/api/violations/${encodeURIComponent(v.violation_id)}/resolve`, {
+        method: "POST", headers: writeHeaders(), body: JSON.stringify({ notes }),
+      });
+      if (state.feed.has(v.violation_id)) state.feed.set(v.violation_id, { ...v, ...updated, resolved: true, notes });
+      renderFeed();
+      closeModal();
+      if (!$("[data-view-panel='violations']").hidden) loadViolations();
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Retry"; }
+      if (e.status === 401) {
+        // The key was missing or wrong — drop it and ask again rather than
+        // silently retrying with a credential the server has rejected.
+        forgetKey();
+        state.writeProtected = true;
+        const field = ensureKeyField();
+        if (field) { field.value = ""; field.focus(); }
+        resolveNote("This server requires an operator API key (ANPR_API_KEY). Enter it and retry.", true);
+      } else if (e.status === 403) {
+        resolveNote("This deployment is read-only, so the violation cannot be resolved here.", true);
+      } else {
+        resolveNote(`Could not resolve the violation: ${e.message}`, true);
+      }
+    }
+  }
+
+  /* ========================================================================
+     Violations view (full history + filters)
+     ==================================================================== */
+  async function loadViolations() {
+    const tbody = $("#viol-rows");
+    tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Loading…</td></tr>`;
+    const type = $("#f-type").value, sev = $("#f-severity").value, resolved = $("#f-resolved").value;
+    const p = new URLSearchParams({ limit: "150" });
+    if (type) p.set("type", type);
+    if (sev) p.set("severity", sev);
+    if (resolved) p.set("resolved", resolved);
+    // keep export links in sync with the type filter
+    try {
+      const data = await api(`/api/violations/alerts?${p}`);
+      const rows = data.alerts || [];
+      if (!rows.length) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">No violations match these filters.</td></tr>`; return; }
+      tbody.innerHTML = "";
+      rows.forEach(v => {
+        const tr = el("tr");
+        tr.innerHTML = `
+          <td class="time-cell">${esc(fmtDateTime(v.timestamp))}</td>
+          <td>${esc(prettyType(v.type))}</td>
+          <td><span class="plate ${v.plate ? "" : "low"}">${esc(v.plate || "UNREAD")}</span></td>
+          <td>${esc(v.camera_name || v.camera_id || "—")}</td>
+          <td class="dim">${esc(detailLine(v) || "—")}</td>
+          <td><span class="sev ${level(v.severity)}">${level(v.severity)}</span></td>
+          <td>${v.resolved ? '<span class="resolved-tag">✓ Resolved</span>' : "Open"}</td>
+          <td></td>`;
+        const act = el("button", "btn btn-sm", v.resolved ? "View" : "Resolve");
+        act.addEventListener("click", () => openModal(v));
+        tr.lastElementChild.appendChild(act);
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Failed to load violations (${esc(e.message)}).</td></tr>`;
+    }
+  }
+
+  function initViolations() {
+    $("#f-refresh").addEventListener("click", loadViolations);
+    ["#f-type", "#f-severity", "#f-resolved"].forEach(s => $(s).addEventListener("change", loadViolations));
+  }
+
+  /* ========================================================================
+     Search vehicle journey
+     ==================================================================== */
+  function initSearch() {
+    $("#s-date").value = todayISO();
+    $("#search-form").addEventListener("submit", (e) => { e.preventDefault(); runSearch(); });
+  }
+
+  /** Mirrors the server-side pattern so a bad plate gets a sentence, not a 422. */
+  const PLATE_OK = /^[A-Za-z0-9][A-Za-z0-9 \-]{1,19}$/;
+
+  async function runSearch() {
+    const plate = $("#s-plate").value.trim();
+    const date = $("#s-date").value;
+    const msg = $("#search-msg"), result = $("#search-result");
+    if (!plate) { msg.hidden = false; msg.textContent = "Enter a license plate to search."; result.hidden = true; return; }
+    if (!PLATE_OK.test(plate)) {
+      msg.hidden = false; result.hidden = true;
+      msg.textContent = "Use 2–20 characters: letters, digits, spaces or hyphens (e.g. MH-31-AB-1234).";
+      return;
+    }
+    msg.hidden = false; msg.textContent = "Searching…"; result.hidden = true;
+    const p = new URLSearchParams(); if (date) p.set("date", date);
+    try {
+      const traj = await api(`/api/vehicles/${encodeURIComponent(plate)}/journey?${p}`);
+      renderJourney(traj);
+      msg.hidden = true; result.hidden = false;
+      setTimeout(() => state.journeyMap && state.journeyMap.invalidateSize(), 60);
+    } catch (e) {
+      result.hidden = true; msg.hidden = false;
+      msg.textContent = e.status === 404
+        ? `No journey found for ${plate}${date ? " on " + date : ""}.`
+        : `Search failed (${e.message}).`;
+    }
+  }
+
+  function renderJourney(traj) {
+    const sightings = traj.sightings || [];
+    $("#j-plate").textContent = traj.plate || "";
+    $("#j-count").textContent = `${sightings.length} sighting${sightings.length === 1 ? "" : "s"}`;
+
+    const list = $("#sightings"); list.innerHTML = "";
+    sightings.forEach(s => {
+      const li = el("li", "sighting");
+      li.innerHTML = `<div class="sighting-cam">${esc(s.camera_name || s.camera_id)}</div>
+        <div class="sighting-meta">${esc(fmtDateTime(s.timestamp))}</div>
+        ${s.direction ? `<div class="sighting-dir">heading ${esc(s.direction)}</div>` : ""}`;
+      list.appendChild(li);
+    });
+
+    if (!hasLeaflet()) { mapUnavailable("journey-map", "Journey map"); return; }
+    if (!state.journeyMap) {
+      state.journeyMap = L.map("journey-map").setView([21.1458, 79.0882], 13);
+      baseTiles().addTo(state.journeyMap);
+      state.journeyLayer = L.layerGroup().addTo(state.journeyMap);
+    }
+    state.journeyLayer.clearLayers();
+    const pts = [];
+    sightings.forEach((s, i) => {
+      const lat = s.position?.lat, lng = s.position?.lng;
+      if (lat == null || lng == null) return;
+      pts.push([lat, lng]);
+      const color = i === 0 ? "#35d07f" : i === sightings.length - 1 ? "#ff3b47" : "#00e5d0";
+      L.circleMarker([lat, lng], { radius: 8, color: "#05080d", weight: 2, fillColor: color, fillOpacity: 1 })
+        .bindPopup(`<div class="popup-cam-name">${i + 1}. ${esc(s.camera_name || s.camera_id)}</div><div class="popup-row">${esc(fmtDateTime(s.timestamp))}</div>`)
+        .addTo(state.journeyLayer);
+    });
+    if (pts.length > 1) L.polyline(pts, { color: CHART_ACCENT, weight: 2, opacity: .65, dashArray: "6 7" }).addTo(state.journeyLayer);
+    if (pts.length) state.journeyMap.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+  }
+
+  /* ========================================================================
+     Reports
+     ==================================================================== */
+  function initReports() {
+    $("#r-date").value = todayISO();
+    $$(".tab").forEach(t => t.addEventListener("click", () => selectTab(t.dataset.tab)));
+    $("#r-volume-go").addEventListener("click", loadVolume);
+    $("#r-viol-go").addEventListener("click", loadViolSummary);
+    $("#r-cong-go").addEventListener("click", loadCongestionReport);
+    // keep the CSV link in step with the chosen date
+    $("#r-date").addEventListener("change", () => {
+      $("#dl-volume-csv").href = `/api/reports/daily-volume.csv?date=${$("#r-date").value}`;
+    });
+    $("#dl-volume-csv").href = `/api/reports/daily-volume.csv?date=${$("#r-date").value}`;
+  }
+  function selectTab(name) {
+    $$(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    $$("[data-tab-panel]").forEach(p => { p.hidden = p.dataset.tabPanel !== name; });
+    loadActiveReport();
+  }
+  function activeTab() { return ($(".tab[aria-selected='true']") || {}).dataset?.tab || "volume"; }
+  function loadActiveReport() {
+    const t = activeTab();
+    if (t === "volume" && !state.charts.hour) loadVolume();
+    else if (t === "viol" && !state.charts.type) loadViolSummary();
+    else if (t === "cong") loadCongestionReport();
+  }
+
+  const chartFont = () => {
+    if (typeof Chart === "undefined") return;
+    Chart.defaults.color = CHART_INK;
+    Chart.defaults.font.family = "'Space Grotesk', system-ui, sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.borderColor = CHART_GRID;
+  };
+
+  async function loadVolume() {
+    const date = $("#r-date").value || todayISO();
+    try {
+      const d = await api(`/api/reports/daily-volume?date=${date}`);
+      $("#volume-summary").innerHTML = `
+        ${kpi("Total vehicles", d.total ?? 0)}
+        ${kpi("Peak hour", d.peak_hour != null ? String(d.peak_hour).padStart(2, "0") + ":00" : "—")}
+        ${kpi("Cameras", (d.by_camera || []).length)}`;
+      drawBar("chart-hour", "hour",
+        (d.by_hour || []).map(h => String(h.hour).padStart(2, "0")),
+        (d.by_hour || []).map(h => num(h.count)), CHART_ACCENT);
+      fillCameraTable("#volume-cameras", d.by_camera || []);
+    } catch (e) { $("#volume-summary").innerHTML = `<p class="search-msg">Could not load daily volume (${esc(e.message)}).</p>`; }
+  }
+
+  async function loadViolSummary() {
+    const hours = $("#r-viol-hours").value || "24";
+    try {
+      const d = await api(`/api/reports/violations-summary?hours=${hours}`);
+      const sev = d.by_severity || {};
+      $("#viol-summary").innerHTML = `
+        ${kpi("Total violations", d.total ?? 0)}
+        ${kpi("High severity", sev.high ?? 0)}
+        ${kpi("Types", Object.keys(d.by_type || {}).length)}`;
+      const types = Object.keys(d.by_type || {});
+      drawDoughnut("chart-type", types.map(prettyType), types.map(t => num(d.by_type[t])), types.map(t => TYPE_COLOR[t] || CHART_ACCENT));
+      fillCameraTable("#viol-cameras", d.by_camera || []);
+    } catch (e) { $("#viol-summary").innerHTML = `<p class="search-msg">Could not load violation summary (${esc(e.message)}).</p>`; }
+  }
+
+  async function loadCongestionReport() {
+    const mins = $("#r-cong-mins").value || "10";
+    const wrap = $("#cong-cards");
+    wrap.innerHTML = `<p class="dim">Loading…</p>`;
+    try {
+      const cells = await api(`/api/congestion/heatmap?window_minutes=${mins}`);
+      if (!cells.length) { wrap.innerHTML = `<p class="dim">No congestion data in this window.</p>`; return; }
+      wrap.innerHTML = "";
+      cells.sort((a, b) => num(b.vehicle_count) - num(a.vehicle_count)).forEach(c => {
+        const card = el("div", "cong-card"); card.dataset.level = level(c.level);
+        card.innerHTML = `<div class="cong-name">${esc(c.camera_name || c.camera_id)}</div>
+          <div class="cong-count">${num(c.vehicle_count)} <small>vehicles · ${level(c.level)}</small></div>`;
+        wrap.appendChild(card);
+      });
+    } catch (e) { wrap.innerHTML = `<p class="dim">Could not load congestion (${esc(e.message)}).</p>`; }
+  }
+
+  function kpi(label, val) { return `<div class="kpi"><div class="kpi-label">${esc(label)}</div><div class="kpi-val">${esc(val)}</div></div>`; }
+
+  function fillCameraTable(sel, rows) {
+    const tbody = $(sel); tbody.innerHTML = "";
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="2" class="tbl-empty">No data</td></tr>`; return; }
+    const max = Math.max(...rows.map(r => num(r.count)), 1);
+    rows.forEach(r => {
+      const tr = el("tr");
+      const count = num(r.count);
+      tr.innerHTML = `<td>${esc(r.camera_name || r.camera_id)}</td>
+        <td class="ta-r bar-cell"><span class="bar" style="width:${(count / max * 100).toFixed(0)}%"></span><span class="mono">${count}</span></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function drawBar(canvasId, key, labels, data, color) {
+    if (typeof Chart === "undefined") return;
+    if (state.charts[key]) state.charts[key].destroy();
+    state.charts[key] = new Chart($("#" + canvasId), {
+      type: "bar",
+      data: { labels, datasets: [{ data, backgroundColor: color, borderRadius: 2, maxBarThickness: 22 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: CHART_GRID } } } },
+    });
+  }
+
+  function drawDoughnut(canvasId, labels, data, colors) {
+    if (typeof Chart === "undefined") return;
+    if (state.charts.type) state.charts.type.destroy();
+    if (!labels.length) { const ctx = $("#" + canvasId).getContext("2d"); ctx.clearRect(0, 0, 9999, 9999); return; }
+    state.charts.type = new Chart($("#" + canvasId), {
+      type: "doughnut",
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: CHART_BG, borderWidth: 3 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "64%",
+        plugins: { legend: { position: "bottom", labels: { padding: 16, usePointStyle: true } } } },
+    });
+  }
+
+  /* ========================================================================
+     Boot
+     ==================================================================== */
+  async function warmStart() {
+    // seed the feed & congestion so the dashboard isn't blank before the first tick
+    try {
+      const [alerts, cong] = await Promise.all([
+        api(`/api/violations/alerts?limit=30`).catch(() => ({ alerts: [] })),
+        api(`/api/congestion/heatmap?window_minutes=10`).catch(() => []),
+      ]);
+      (alerts.alerts || []).forEach(v => { if (v.violation_id) { state.feed.set(v.violation_id, v); state.seenAlerts.add(v.violation_id); } });
+      renderFeed();
+      updateCongestion(cong);
+      updateCongestionStat(cong);
+    } catch { /* non-fatal */ }
+  }
+
+  async function boot() {
+    initNav(); initViolations(); initSearch(); initReports();
+
+    // Recover the map/chart libraries before anything tries to draw with them.
+    const [, hasChart] = await Promise.all([ensureLib("L"), ensureLib("Chart")]);
+    if (hasChart) chartFont();
+    $("#modal-close").addEventListener("click", closeModal);
+    $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+    $("#toggle-vehicles")?.addEventListener("change", () => { if (!$("#toggle-vehicles").checked) state.vehLayer?.clearLayers(); });
+
+    try {
+      state.cameras = await api("/api/cameras");
+      state.cameras.forEach(c => state.camById[c.id] = c);
+    } catch { state.cameras = []; }
+
+    // Learn the server's write posture so the resolve dialog can ask for a key
+    // up front rather than failing on submit. The server enforces this either
+    // way — this only shapes the prompt.
+    try {
+      const health = await api("/health");
+      state.writeProtected = !!health.write_protected;
+      state.readOnly = !!health.read_only;
+    } catch { /* non-fatal */ }
+
+    initMap();
+    await warmStart();
+    connectWS();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();

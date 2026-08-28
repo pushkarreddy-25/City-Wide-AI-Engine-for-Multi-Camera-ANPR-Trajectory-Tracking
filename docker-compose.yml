@@ -1,0 +1,84 @@
+# ANPR Traffic Intelligence Engine — production topology.
+#
+# This compose file demonstrates the *production* path from the architecture
+# doc: FastAPI backend + PostgreSQL + Redis. The exact same application code
+# runs on SQLite + in-memory cache when these env vars are absent (see the
+# "runs anywhere" quick-start in README.md) — no code changes, just config.
+#
+#   cp .env.example .env      # then set POSTGRES_PASSWORD / REDIS_PASSWORD
+#   docker compose up --build
+#   → dashboard  http://localhost:8000/
+#   → API docs   http://localhost:8000/docs
+#
+# Note: the backend runs a single Uvicorn worker on purpose — the in-process
+# background traffic simulator must be a singleton. Scale reads with a
+# read-replica or an external ingestion service, not by adding workers here.
+#
+# Security notes for this topology:
+#   * Postgres and Redis publish no host ports. The backend reaches them by
+#     service name over the internal compose network, so there is no reason to
+#     expose a datastore on the host's interfaces.
+#   * Their passwords come from the environment. The `:?` syntax makes compose
+#     refuse to start rather than fall back to a guessable default.
+#   * ANPR_API_KEY gates the one endpoint that mutates data.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-anpr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-anpr_traffic}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Internal only. Uncomment to inspect with psql from the host, and expect
+    # to be reachable from your whole network while you do.
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-anpr} -d ${POSTGRES_DB:-anpr_traffic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    # Redis has no authentication by default, so anyone who reaches the port
+    # gets full command access — including FLUSHALL and CONFIG SET.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-anpr}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-anpr_traffic}
+      CACHE_BACKEND: redis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      SIM_ENABLED: "1"
+      SIM_SEED: "42"
+      # Required to POST /api/violations/{id}/resolve. Leave empty for an
+      # entirely read-only demo, or set ANPR_READ_ONLY=1 to refuse writes.
+      ANPR_API_KEY: ${ANPR_API_KEY:-}
+      ANPR_READ_ONLY: ${ANPR_READ_ONLY:-0}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      ENABLE_DOCS: ${ENABLE_DOCS:-1}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
