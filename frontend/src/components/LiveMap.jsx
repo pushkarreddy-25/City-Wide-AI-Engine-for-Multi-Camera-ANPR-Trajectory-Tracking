@@ -54,19 +54,34 @@ function MapLayers({ cameras, congestion, vehicles, showVehicles }) {
   // build camera markers once cameras arrive
   useEffect(() => {
     if (!camLayer.current || !cameras.length) return;
-    camLayer.current.clearLayers();
-    markers.current = {};
+
+    const nextMarkers = {};
     const pts = [];
     cameras.forEach((c) => {
       const lat = c.position?.lat, lng = c.position?.lng;
       if (lat == null || lng == null) return;
       pts.push([lat, lng]);
-      const m = L.marker([lat, lng], { icon: camIcon(0, "low") })
-        .bindPopup(camPopup(c))
-        .addTo(camLayer.current);
-      markers.current[c.id] = m;
+      const key = c.id ?? c.camera_id;
+      const existing = markers.current[key];
+      const marker = existing ?? L.marker([lat, lng], { icon: camIcon(0, "low") });
+      marker.setLatLng([lat, lng]);
+      marker.setIcon(camIcon(0, "low"));
+      if (!existing) {
+        marker.bindPopup(camPopup(c)).addTo(camLayer.current);
+      }
+      nextMarkers[key] = marker;
     });
-    if (pts.length) map.fitBounds(pts, { padding: [50, 50] });
+
+    Object.keys(markers.current).forEach((key) => {
+      if (!nextMarkers[key]) {
+        markers.current[key].remove();
+      }
+    });
+    markers.current = nextMarkers;
+
+    if (pts.length) {
+      map.fitBounds(pts, { padding: [50, 50], maxZoom: 13 });
+    }
   }, [cameras, map]);
 
   // recolour camera markers on congestion updates
@@ -77,14 +92,16 @@ function MapLayers({ cameras, congestion, vehicles, showVehicles }) {
       const cell = byId[id];
       marker.setIcon(camIcon(cell?.vehicle_count, cell?.level));
     });
-  }, [congestion]);
+  }, [congestion, map]);
 
   // vehicle activity dots (jittered around each camera)
   useEffect(() => {
     if (!vehLayer.current) return;
     vehLayer.current.clearLayers();
     if (!showVehicles) return;
-    (vehicles || []).slice(0, 120).forEach((v) => {
+
+    const items = (vehicles || []).slice(0, 120);
+    items.forEach((v) => {
       const lat = v.position?.lat, lng = v.position?.lng;
       if (lat == null || lng == null) return;
       const j = 0.0016;

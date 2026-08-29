@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { wsUrl } from "../services/api.js";
 
 /**
  * Subscribes to the backend WebSocket /ws/vehicles and exposes the latest
@@ -55,25 +56,36 @@ export function useLiveSnapshot(onNewAlert) {
     let ws, reconnectT, closed = false;
 
     const connect = () => {
-      const proto = location.protocol === "https:" ? "wss" : "ws";
+      if (closed) return;
       try {
-        ws = new WebSocket(`${proto}://${location.host}/ws/vehicles`);
+        ws = new WebSocket(wsUrl("/ws/vehicles"));
       } catch {
         scheduleReconnect();
         return;
       }
       setStatus("connecting");
       ws.onopen = () => setStatus("live");
-      ws.onclose = () => { if (!closed) { setStatus("down"); scheduleReconnect(); } };
-      ws.onerror = () => { try { ws.close(); } catch {} };
+      ws.onclose = () => {
+        if (!closed) {
+          setStatus("down");
+          scheduleReconnect();
+        }
+      };
+      ws.onerror = () => {
+        try { ws.close(); } catch {}
+      };
       ws.onmessage = (ev) => {
         let msg;
-        try { msg = JSON.parse(ev.data); } catch { return; }
+        try {
+          msg = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
         setSnapshot({
-          vehicles: msg.vehicles || [],
-          alerts: msg.alerts || [],
-          congestion: msg.congestion || [],
-          stats: msg.stats || {},
+          vehicles: Array.isArray(msg.vehicles) ? msg.vehicles : [],
+          alerts: Array.isArray(msg.alerts) ? msg.alerts : [],
+          congestion: Array.isArray(msg.congestion) ? msg.congestion : [],
+          stats: msg.stats && typeof msg.stats === "object" ? msg.stats : {},
         });
         ingest(msg.alerts);
       };
