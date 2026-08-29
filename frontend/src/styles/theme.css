@@ -72,7 +72,7 @@ canvas { display: block; }
   --r-lg:   4px;
   --rail-w: 208px;
   --top-h:  60px;
-  --gap:    14px;
+  --gap:    12px;
 
   /* the eyebrow/label treatment, used in a dozen places */
   --label: 600 10px/1 var(--display);
@@ -118,6 +118,7 @@ body::before {
    viewport height with the content column as the only scroller — an ops
    console should never move its own chrome. */
 #root { min-height: 100vh; }
+#root, .content, .view { min-height: 100%; }
 
 .app-shell {
   height: 100vh;
@@ -231,9 +232,9 @@ body::before {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 18px;
 }
-.meta-item { display: flex; flex-direction: column; gap: 3px; }
+.meta-item { display: flex; flex-direction: column; gap: 2px; }
 .meta-label {
   font: var(--label);
   letter-spacing: var(--track);
@@ -393,9 +394,10 @@ body::before {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--deck);
+  background: linear-gradient(180deg, rgba(12, 18, 25, .98), rgba(9, 14, 20, .94));
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 12px 32px rgba(0,0,0,.16);
 }
 /* Corner brackets — the frame a targeting system draws around a region of
    interest. Two corners only; four is a costume. */
@@ -417,28 +419,29 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--rule);
-  min-height: 44px;
+  min-height: 42px;
 }
 
 /* --------------------------------------------------------- stat readouts --- */
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--gap);
+  gap: 10px;
 }
 .stat {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 13px 15px 14px;
-  background: var(--deck);
+  gap: 5px;
+  padding: 12px 14px 13px;
+  background: linear-gradient(180deg, rgba(12,18,25,.96), rgba(9,14,20,.92));
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
 }
 .stat::after {
   content: "";
@@ -525,23 +528,28 @@ body::before {
 .radar {
   position: absolute;
   inset: 44px 0 0;      /* clears the panel header */
-  z-index: 401;         /* leaflet: tiles 200–400, markers 600 */
+  z-index: 350;         /* keep below markers but above the map tiles */
   overflow: hidden;
   pointer-events: none;
+  opacity: .78;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle at center, rgba(0,229,208,.04), transparent 58%);
 }
 .radar::before {
   content: "";
   position: absolute;
   left: 50%; top: 50%;
-  width: 190%;
+  width: 180%;
   aspect-ratio: 1;
   translate: -50% -50%;
   background: conic-gradient(
     from 0deg,
-    rgba(0, 229, 208, .17),
-    rgba(0, 229, 208, .05) 14%,
-    rgba(0, 229, 208, 0)   30%,
-    rgba(0, 229, 208, 0)   100%);
+    rgba(0, 229, 208, .18),
+    rgba(0, 229, 208, .10) 6%,
+    rgba(0, 229, 208, .03) 18%,
+    rgba(0, 229, 208, 0) 32%,
+    rgba(0, 229, 208, 0) 100%);
+  filter: blur(1px);
   animation: sweep 16s linear infinite;
 }
 @keyframes sweep { to { rotate: 360deg; } }
@@ -595,7 +603,26 @@ body::before {
 }
 
 /* leaflet chrome, brought into the palette */
-.leaflet-container { background: #060b10; font-family: var(--sans); }
+.leaflet-container {
+  background: #060b10;
+  font-family: var(--sans);
+  border-radius: var(--r-lg);
+}
+.leaflet-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-shadow-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane {
+  z-index: 1;
+}
+.leaflet-control-container { z-index: 420; }
+.leaflet-control-zoom {
+  border: 1px solid var(--rule) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .22) !important;
+  overflow: hidden;
+}
 .leaflet-control-zoom a {
   background: var(--deck-2) !important;
   color: var(--ink) !important;
@@ -705,11 +732,11 @@ body::before {
 .feed-item {
   position: relative;
   padding: 10px 12px 10px 14px;
-  background: var(--deck-2);
+  background: linear-gradient(180deg, rgba(15, 22, 29, .95), rgba(11, 17, 23, .9));
   border: 1px solid var(--rule);
   border-radius: var(--r);
   cursor: pointer;
-  transition: background-color .13s, border-color .13s;
+  transition: background-color .13s, border-color .13s, transform .12s ease;
 }
 .feed-item::before {
   content: "";
@@ -720,7 +747,11 @@ body::before {
 }
 .feed-item[data-sev="medium"]::before { background: var(--amber); }
 .feed-item[data-sev="high"]::before   { background: var(--red); }
-.feed-item:hover { background: var(--deck-3); border-color: var(--rule-hi); }
+.feed-item:hover {
+  background: linear-gradient(180deg, rgba(18, 27, 35, .96), rgba(12, 18, 25, .94));
+  border-color: var(--rule-hi);
+  transform: translateY(-1px);
+}
 .feed-top {
   display: flex;
   align-items: center;
