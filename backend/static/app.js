@@ -195,16 +195,16 @@
   }
 
   function cameraDensityColor(count) {
-    if (count >= 9) return "#ff3b47";
-    if (count >= 5) return "#ffb020";
-    if (count >= 2) return "#00a8a8";
-    if (count > 0) return "#35d07f";
-    return "#9aa8b3";
+    if (count >= 12) return "#ef4444";
+    if (count >= 8) return "#f97316";
+    if (count >= 4) return "#fbbf24";
+    if (count >= 1) return "#2dd4bf";
+    return "#94a3b8";
   }
 
   function cameraDensityRadius(count) {
-    if (!count) return 7;
-    return Math.min(18, 9 + count * 2.1);
+    if (!count) return 8;
+    return Math.min(22, 10 + count * 2.4);
   }
 
   function syncCameraDensity(vehicles) {
