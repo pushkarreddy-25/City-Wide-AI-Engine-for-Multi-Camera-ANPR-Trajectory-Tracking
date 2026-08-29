@@ -23,6 +23,7 @@ from db.database import SessionLocal
 from db.models import Detection
 from linking_module import TrajectoryLinker
 from services import live_service
+from services.runtime_service import runtime_services
 from simulation.fleet import Vehicle, build_fleet
 from simulation.pipeline import ProcessingPipeline
 from utils.config import cameras as camera_config
@@ -172,6 +173,10 @@ class TrafficSimulator:
 
         for camera_id, trips in frames.items():
             frame = [self._ground_truth(t) for t in trips]
+            if getattr(runtime_services, "started", False):
+                runtime_services.emit_frame(camera_id, frame, timestamp=now)
+                continue
+
             dets, _ = self.pipeline.process_frame(db, camera_id, frame, now, publish=True)
             by_vid: Dict[int, List[dict]] = {}
             for d in dets:
