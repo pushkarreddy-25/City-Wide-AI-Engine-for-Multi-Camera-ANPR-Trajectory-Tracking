@@ -4,8 +4,7 @@
    Same direction as the zero-build dashboard ("Tactical BEL HUD"), so the two
    frontends are recognisably one product: instrument surfaces on near-black,
    one cyan signal colour for the system's own voice, amber and red spent only
-   where severity is real. Calm by default — the single moving element is the
-   radar sweep over the operations map.
+   where severity is real.
 
    Kept deliberately token-first: the palette and type live in :root, so the
    whole console can be retuned without touching component rules. Class names
@@ -353,20 +352,6 @@ body::before {
 }
 
 .sidebar-foot { margin-top: auto; padding: 12px 12px 4px; border-top: 1px solid var(--rule); }
-.legend { display: flex; flex-direction: column; gap: 8px; }
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: var(--label);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-}
-.dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-.dot.ok   { background: var(--cyan); }
-.dot.warn { background: var(--amber); }
-.dot.bad  { background: var(--red); }
 
 /* -------------------------------------------------------------- content --- */
 .content {
@@ -508,170 +493,7 @@ body::before {
   flex: 1;
   min-height: 460px;
 }
-.panel-map, .panel-feed { min-height: 0; }
-
-/* ------------------------------------------------------------------ map --- */
-.map {
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  min-height: 320px;
-  background: #edf5f8;
-}
-.map-sm { min-height: 340px; }
-.panel-map {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-  background: linear-gradient(180deg, #eef5f8 0%, #ebf2f5 100%);
-  border: 1px solid rgba(93, 117, 138, 0.2);
-}
-.leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 320px;
-  background: #edf5f8;
-}
-
-/* Light map overlay sweep: visible against the default OSM tiles while staying
-   subtle enough not to obscure the route work. */
-.radar {
-  position: absolute;
-  inset: 44px 0 0;
-  z-index: 450;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0.18;
-  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.08), transparent 60%);
-}
-.radar::before {
-  content: "";
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 190%;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(14, 116, 144, 0.00),
-    rgba(14, 116, 144, 0.22) 10%,
-    rgba(14, 116, 144, 0.08) 20%,
-    rgba(14, 116, 144, 0.00) 30%,
-    rgba(14, 116, 144, 0.00) 100%);
-  filter: blur(1.2px);
-  animation: sweep 16s linear infinite;
-  transform-origin: center;
-}
-.radar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(14,165,233,0.06), transparent 58%);
-}
-@keyframes sweep { to { rotate: 360deg; } }
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font: var(--label);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-  cursor: pointer;
-}
-.toggle input { accent-color: var(--cyan); width: 13px; height: 13px; cursor: pointer; }
-
-/* camera node marker (divIcon built in LiveMap.jsx) */
-.cam-node {
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(0, 229, 208, .1);
-  border: 1px solid var(--cyan);
-  box-shadow: 0 0 0 1px rgba(5, 8, 13, .9), 0 0 14px rgba(0, 229, 208, .28);
-}
-.cam-node .cam-ring { display: grid; place-items: center; }
-.cam-count {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--cyan-soft);
-}
-.cam-node[data-level="medium"] {
-  background: rgba(255, 176, 32, .12);
-  border-color: var(--amber);
-  box-shadow: 0 0 0 1px rgba(5, 8, 13, .9), 0 0 14px rgba(255, 176, 32, .3);
-}
-.cam-node[data-level="medium"] .cam-count { color: var(--amber); }
-.cam-node[data-level="high"] {
-  background: rgba(255, 59, 71, .14);
-  border-color: var(--red);
-  box-shadow: 0 0 0 1px rgba(5, 8, 13, .9), 0 0 16px rgba(255, 59, 71, .34);
-}
-.cam-node[data-level="high"] .cam-count { color: var(--red); }
-
-.veh-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--cyan-soft);
-  box-shadow: 0 0 6px rgba(0, 229, 208, .8);
-  opacity: .85;
-}
-
-/* leaflet chrome, brought into the palette */
-.leaflet-container {
-  background: #edf5f8;
-  font-family: var(--sans);
-  border-radius: var(--r-lg);
-}
-.leaflet-pane,
-.leaflet-tile-pane,
-.leaflet-overlay-pane,
-.leaflet-shadow-pane,
-.leaflet-marker-pane,
-.leaflet-tooltip-pane,
-.leaflet-popup-pane {
-  z-index: 1;
-}
-.leaflet-control-container { z-index: 500; }
-.leaflet-control-zoom {
-  border: 1px solid rgba(148, 163, 184, 0.6) !important;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12) !important;
-  overflow: hidden;
-}
-.leaflet-control-zoom a {
-  background: rgba(255,255,255,0.86) !important;
-  color: #0f172a !important;
-  border-color: rgba(148,163,184,0.65) !important;
-}
-.leaflet-control-zoom a:hover { background: rgba(239,246,255,0.96) !important; color: #0f766e !important; }
-.leaflet-control-attribution {
-  background: rgba(255, 255, 255, 0.82) !important;
-  color: #475569 !important;
-  font-size: 10px !important;
-}
-.leaflet-control-attribution a { color: #0f172a !important; }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background: rgba(255, 255, 255, 0.96);
-  color: #0f172a;
-  border: 1px solid rgba(148, 163, 184, 0.65);
-  border-radius: var(--r);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
-}
-.leaflet-popup-content { margin: 10px 12px; font-size: 12px; }
-.leaflet-popup-close-button { color: #334155 !important; }
-.popup-cam-name {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #0f766e;
-  margin-bottom: 3px;
-}
-.popup-row { color: #475569; font-size: 11.5px; }
+.panel-feed { min-height: 0; }
 
 /* ----------------------------------------------------------- plate chip --- */
 .plate {
