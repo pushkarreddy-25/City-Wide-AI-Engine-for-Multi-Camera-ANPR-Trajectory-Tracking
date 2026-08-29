@@ -16,8 +16,8 @@ function JourneyMap({ sightings }) {
   return (
     <MapContainer center={center} zoom={13} className="map map-sm" style={{ height: "100%", width: "100%" }}>
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; OpenStreetMap contributors &copy; CARTO'
       />
       {pts.length > 1 && <Polyline positions={pts} pathOptions={{ color: HOP.mid, weight: 2, opacity: 0.75, dashArray: "5 7" }} />}
       {sightings.map((s, i) => {
