@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from api import security
 from api.routers import analytics, cameras, vehicles, violations, ws
 from db.init_db import init_db
+from services.runtime_service import runtime_services
 from simulation import TrafficSimulator
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     def _startup():
         global simulator
         init_db(reset=False, seed=True)
+        runtime_services.start()
         simulator = TrafficSimulator(seed=int(os.getenv("SIM_SEED", "42")))
         if os.getenv("SIM_ENABLED", "1") != "0":
             simulator.start()
@@ -78,6 +80,7 @@ def create_app() -> FastAPI:
     def _shutdown():
         if simulator is not None:
             simulator.stop()
+        runtime_services.stop()
 
     # Serve the static control-room dashboard at the root (if built).
     if os.path.isdir(STATIC_DIR):
