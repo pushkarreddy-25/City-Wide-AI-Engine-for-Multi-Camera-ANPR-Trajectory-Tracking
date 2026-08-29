@@ -69,10 +69,10 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       SIM_ENABLED: "1"
       SIM_SEED: "42"
-      # Required to POST /api/violations/{id}/resolve. Leave empty for an
-      # entirely read-only demo, or set ANPR_READ_ONLY=1 to refuse writes.
+      # Production-safe default: writes stay disabled until an operator
+      # explicitly opts in with ANPR_READ_ONLY=0 and supplies ANPR_API_KEY.
       ANPR_API_KEY: ${ANPR_API_KEY:-}
-      ANPR_READ_ONLY: ${ANPR_READ_ONLY:-0}
+      ANPR_READ_ONLY: ${ANPR_READ_ONLY:-1}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
       ENABLE_DOCS: ${ENABLE_DOCS:-1}
