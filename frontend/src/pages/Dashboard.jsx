@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { LiveMap } from "../components/LiveMap.jsx";
+import { useMemo } from "react";
 import { PlateChip, Severity } from "../components/PlateChip.jsx";
 import { congestionIndex, fmtTime, prettyType } from "../services/format.js";
 
@@ -14,7 +13,6 @@ function StatCard({ id, eyebrow, value, children }) {
 }
 
 export function Dashboard({ cameras, snapshot, feed, openModal }) {
-  const [showVehicles, setShowVehicles] = useState(true);
   const { vehicles = [], congestion = [], stats = {} } = snapshot;
 
   const avgSpeed = useMemo(() => {
@@ -45,20 +43,6 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
       </div>
 
       <div className="dash-grid">
-        <section className="panel panel-map">
-          <div className="panel-head">
-            <h2 className="eyebrow">Live operations map</h2>
-            <label className="toggle">
-              <input type="checkbox" checked={showVehicles} onChange={(e) => setShowVehicles(e.target.checked)} />
-              <span>Show vehicle activity</span>
-            </label>
-          </div>
-          <LiveMap cameras={cameras} congestion={congestion} vehicles={vehicles} showVehicles={showVehicles} />
-          {/* Decorative sweep over the tiles; sits below the markers so data
-              stays legible, and disappears under prefers-reduced-motion. */}
-          <div className="radar" aria-hidden="true" />
-        </section>
-
         <section className="panel panel-feed">
           <div className="panel-head">
             <h2 className="eyebrow">Live violation feed</h2>
