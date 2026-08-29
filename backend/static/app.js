@@ -104,6 +104,8 @@
     writeProtected: false,    // server wants a key before it accepts a write
     readOnly: false,          // server refuses every write
     writeKey: "",             // fallback when sessionStorage is unavailable
+    map: null,
+    camLayer: null,
   };
 
   /* ========================================================================
@@ -171,8 +173,79 @@
     updateSpeedStat(vehicles);
     updateCongestionStat(congestion);
 
+    // live map
+    syncCameraDensity(vehicles);
+
     // violations feed
     ingestAlerts(alerts);
+  }
+
+  function hasLeaflet() { return typeof window !== "undefined" && !!window.L && !!document.getElementById("map"); }
+
+  function initMap() {
+    if (!hasLeaflet()) return false;
+    if (state.map) return true;
+    state.map = L.map("map", { zoomControl: true, attributionControl: true }).setView([21.1458, 79.0882], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(state.map);
+    state.camLayer = L.layerGroup().addTo(state.map);
+    return true;
+  }
+
+  function cameraDensityColor(count) {
+    if (count >= 9) return "#ff3b47";
+    if (count >= 5) return "#ffb020";
+    if (count >= 2) return "#00a8a8";
+    if (count > 0) return "#35d07f";
+    return "#9aa8b3";
+  }
+
+  function cameraDensityRadius(count) {
+    if (!count) return 7;
+    return Math.min(18, 9 + count * 2.1);
+  }
+
+  function syncCameraDensity(vehicles) {
+    if (!state.cameras.length) return;
+    if (!initMap()) return;
+
+    const counts = new Map();
+    (vehicles || []).forEach(v => {
+      const cameraId = v && (v.camera_id || v.cameraId);
+      if (!cameraId) return;
+      counts.set(cameraId, (counts.get(cameraId) || 0) + 1);
+    });
+
+    const nodes = [];
+    state.cameras.forEach(cam => {
+      const id = cam.id || cam.camera_id;
+      const pos = cam.position || {};
+      const lat = Number(pos.lat), lng = Number(pos.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const count = counts.get(id) || 0;
+      nodes.push({ id, name: cam.name || id, lat, lng, count });
+    });
+
+    if (!nodes.length) return;
+
+    if (state.camLayer) state.camLayer.clearLayers();
+    nodes.forEach(node => {
+      const marker = L.circleMarker([node.lat, node.lng], {
+        radius: cameraDensityRadius(node.count),
+        color: cameraDensityColor(node.count),
+        fillColor: cameraDensityColor(node.count),
+        fillOpacity: node.count ? 0.72 : 0.28,
+        weight: 1.8,
+      });
+      marker.bindPopup(`<div class="map-popup"><div class="map-popup-title">${esc(node.name)}</div><div class="map-popup-row"><span>Vehicle density</span><strong>${node.count}</strong></div><div class="map-popup-row"> <span>Level</span><strong>${node.count >= 9 ? "high" : node.count >= 5 ? "medium" : node.count > 0 ? "low" : "idle"}</strong></div></div>`);
+      marker.addTo(state.camLayer);
+    });
+
+    const bounds = L.latLngBounds(nodes.map(node => [node.lat, node.lng]));
+    if (state.map && nodes.length) state.map.fitBounds(bounds, { padding: [25, 25], maxZoom: 13 });
+    $("#camera-density-count").textContent = String(nodes.reduce((sum, node) => sum + node.count, 0));
   }
 
   function setStat(sel, val) {

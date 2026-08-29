@@ -10,8 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <script src="/assets.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body data-view="dashboard">
@@ -99,6 +101,14 @@
       </div>
 
       <div class="dash-grid">
+        <section class="panel panel-map">
+          <div class="panel-head">
+            <h2 class="eyebrow">Camera density</h2>
+            <span class="feed-count mono" id="camera-density-count">0</span>
+          </div>
+          <div id="map" class="map" aria-label="Vehicle density map"></div>
+        </section>
+
         <section class="panel panel-feed">
           <div class="panel-head">
             <h2 class="eyebrow">Live violation feed</h2>
