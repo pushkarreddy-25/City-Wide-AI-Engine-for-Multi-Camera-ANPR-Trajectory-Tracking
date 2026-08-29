@@ -100,7 +100,7 @@ function MapLayers({ cameras, congestion, vehicles, showVehicles }) {
 
 export function LiveMap({ cameras = [], congestion = [], vehicles = [], showVehicles = true }) {
   return (
-    <MapContainer center={NAGPUR} zoom={13} className="map" zoomControl>
+    <MapContainer center={NAGPUR} zoom={13} className="map" zoomControl style={{ height: "100%", width: "100%" }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"

@@ -14,7 +14,7 @@ function JourneyMap({ sightings }) {
   const pts = sightings.map((s) => [s.position?.lat, s.position?.lng]).filter((p) => p[0] != null);
   const center = pts.length ? pts[0] : NAGPUR;
   return (
-    <MapContainer center={center} zoom={13} className="map map-sm">
+    <MapContainer center={center} zoom={13} className="map map-sm" style={{ height: "100%", width: "100%" }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
