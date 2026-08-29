@@ -516,7 +516,7 @@ body::before {
   width: 100%;
   height: 100%;
   min-height: 320px;
-  background: #060b10;
+  background: #edf5f8;
 }
 .map-sm { min-height: 340px; }
 .panel-map {
@@ -525,25 +525,26 @@ body::before {
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  background: linear-gradient(180deg, #eef5f8 0%, #ebf2f5 100%);
+  border: 1px solid rgba(93, 117, 138, 0.2);
 }
 .leaflet-container {
   width: 100% !important;
   height: 100% !important;
   min-height: 320px;
+  background: #edf5f8;
 }
 
-/* THE signature: one slow sweep, sitting above the tiles and below the camera
-   markers so the data always stays legible. Purely decorative, so it is
-   inert to the pointer and disappears under reduced-motion. */
+/* Light map overlay sweep: visible against the default OSM tiles while staying
+   subtle enough not to obscure the route work. */
 .radar {
   position: absolute;
-  inset: 44px 0 0;      /* clears the panel header */
-  z-index: 350;         /* keep below markers but above the map tiles */
+  inset: 44px 0 0;
+  z-index: 450;
   overflow: hidden;
   pointer-events: none;
-  opacity: .78;
-  mix-blend-mode: screen;
-  background: radial-gradient(circle at center, rgba(0,229,208,.04), transparent 58%);
+  opacity: 0.9;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.10), transparent 58%);
 }
 .radar::before {
   content: "";
@@ -554,11 +555,12 @@ body::before {
   translate: -50% -50%;
   background: conic-gradient(
     from 0deg,
-    rgba(0, 229, 208, .22),
-    rgba(0, 229, 208, .12) 8%,
-    rgba(0, 229, 208, .04) 18%,
-    rgba(0, 229, 208, 0) 30%,
-    rgba(0, 229, 208, 0) 100%);
+    rgba(14, 116, 144, 0.42),
+    rgba(56, 189, 248, 0.20) 10%,
+    rgba(14, 116, 144, 0.08) 22%,
+    rgba(14, 116, 144, 0.00) 38%,
+    rgba(14, 116, 144, 0.00) 100%);
+  box-shadow: inset 0 0 24px rgba(255,255,255,0.35);
   filter: blur(1.2px);
   animation: sweep 16s linear infinite;
 }
@@ -566,7 +568,7 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(0,229,208,.06), transparent 58%);
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.09), transparent 58%);
 }
 @keyframes sweep { to { rotate: 360deg; } }
 
@@ -620,7 +622,7 @@ body::before {
 
 /* leaflet chrome, brought into the palette */
 .leaflet-container {
-  background: #060b10;
+  background: #edf5f8;
   font-family: var(--sans);
   border-radius: var(--r-lg);
 }
@@ -633,43 +635,43 @@ body::before {
 .leaflet-popup-pane {
   z-index: 1;
 }
-.leaflet-control-container { z-index: 420; }
+.leaflet-control-container { z-index: 500; }
 .leaflet-control-zoom {
-  border: 1px solid var(--rule) !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .22) !important;
+  border: 1px solid rgba(148, 163, 184, 0.6) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12) !important;
   overflow: hidden;
 }
 .leaflet-control-zoom a {
-  background: var(--deck-2) !important;
-  color: var(--ink) !important;
-  border-color: var(--rule) !important;
+  background: rgba(255,255,255,0.86) !important;
+  color: #0f172a !important;
+  border-color: rgba(148,163,184,0.65) !important;
 }
-.leaflet-control-zoom a:hover { background: var(--deck-3) !important; color: var(--cyan) !important; }
+.leaflet-control-zoom a:hover { background: rgba(239,246,255,0.96) !important; color: #0f766e !important; }
 .leaflet-control-attribution {
-  background: rgba(5, 8, 13, .78) !important;
-  color: var(--ink-mute) !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #475569 !important;
   font-size: 10px !important;
 }
-.leaflet-control-attribution a { color: var(--ink-dim) !important; }
+.leaflet-control-attribution a { color: #0f172a !important; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background: var(--deck-2);
-  color: var(--ink);
-  border: 1px solid var(--rule-hi);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.65);
   border-radius: var(--r);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .6);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .14);
 }
 .leaflet-popup-content { margin: 10px 12px; font-size: 12px; }
-.leaflet-popup-close-button { color: var(--ink-dim) !important; }
+.leaflet-popup-close-button { color: #334155 !important; }
 .popup-cam-name {
   font-family: var(--display);
   font-weight: 600;
   font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--cyan-soft);
+  color: #0f766e;
   margin-bottom: 3px;
 }
-.popup-row { color: var(--ink-dim); font-size: 11.5px; }
+.popup-row { color: #475569; font-size: 11.5px; }
 
 /* ----------------------------------------------------------- plate chip --- */
 .plate {
