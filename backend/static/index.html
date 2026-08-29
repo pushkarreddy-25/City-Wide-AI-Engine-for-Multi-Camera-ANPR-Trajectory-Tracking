@@ -206,14 +206,19 @@
         <button class="btn btn-primary" type="submit">Search journey</button>
       </form>
 
-      <div class="search-result" id="search-result" hidden>
+      <div class="journey-grid" id="journey-grid" hidden>
+        <section class="panel panel-journey-map">
+          <div class="panel-head">
+            <h2 class="eyebrow">Vehicle journey</h2>
+            <span class="plate-tag mono" id="j-plate"></span>
+          </div>
+          <div id="journey-map" class="journey-map" aria-label="Vehicle journey map"></div>
+        </section>
+
         <section class="panel">
           <div class="panel-head">
             <h2 class="eyebrow">Sightings</h2>
-            <div class="search-meta">
-              <span class="mono dim" id="j-plate"></span>
-              <span class="mono dim" id="j-count"></span>
-            </div>
+            <span class="feed-count mono" id="j-count">0 stops</span>
           </div>
           <ol class="sightings" id="sightings"></ol>
         </section>

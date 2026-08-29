@@ -512,45 +512,136 @@
   async function runSearch() {
     const plate = $("#s-plate").value.trim();
     const date = $("#s-date").value;
-    const msg = $("#search-msg"), result = $("#search-result");
-    if (!plate) { msg.hidden = false; msg.textContent = "Enter a license plate to search."; result.hidden = true; return; }
+    const msg = $("#search-msg"), grid = $("#journey-grid");
+    if (!plate) { msg.hidden = false; msg.textContent = "Enter a license plate to search."; grid.hidden = true; return; }
     if (!PLATE_OK.test(plate)) {
-      msg.hidden = false; result.hidden = true;
+      msg.hidden = false; grid.hidden = true;
       msg.textContent = "Use 2–20 characters: letters, digits, spaces or hyphens (e.g. MH-31-AB-1234).";
       return;
     }
-    msg.hidden = false; msg.textContent = "Searching…"; result.hidden = true;
+    msg.hidden = false; msg.textContent = "Searching…"; grid.hidden = true;
     const p = new URLSearchParams(); if (date) p.set("date", date);
     try {
       const traj = await api(`/api/vehicles/${encodeURIComponent(plate)}/journey?${p}`);
       renderJourney(traj);
-      msg.hidden = true; result.hidden = false;
+      msg.hidden = true;
     } catch (e) {
-      result.hidden = true; msg.hidden = false;
+      grid.hidden = true; msg.hidden = false;
       msg.textContent = e.status === 404
         ? `No journey found for ${plate}${date ? " on " + date : ""}.`
         : `Search failed (${e.message}).`;
     }
   }
 
+  /* ========================================================================
+     Journey Leaflet map
+     ==================================================================== */
+  let jmap = null;
+  let jLayer = null;
+
+  function initJourneyMap() {
+    if (jmap) return;
+    const container = $("#journey-map");
+    if (!container) return;
+    jmap = L.map("journey-map", {
+      center: [19.15, 72.95],
+      zoom: 11,
+      zoomControl: true,
+      attributionControl: true,
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(jmap);
+    jLayer = L.layerGroup().addTo(jmap);
+  }
+
   function renderJourney(traj) {
-    const sightings = traj.sightings || [];
+    const grid = $("#journey-grid");
+    const msg = $("#search-msg");
+    const sightings = $("#sightings");
+    const sightings_data = traj.sightings || [];
+
+    if (!sightings_data.length) {
+      if (grid) grid.hidden = true;
+      if (msg) { msg.hidden = false; msg.textContent = `No journey found for ${traj.plate_number || ""} on this date.`; }
+      return;
+    }
+
+    initJourneyMap();
+
     const plateEl = $("#j-plate");
     const countEl = $("#j-count");
-    const list = $("#sightings");
+    if (plateEl) plateEl.textContent = traj.plate_number || "";
+    if (countEl) countEl.textContent = `${sightings_data.length} stops`;
 
-    if (plateEl) plateEl.textContent = traj.plate || "";
-    if (countEl) countEl.textContent = `${sightings.length} sighting${sightings.length === 1 ? "" : "s"}`;
-    if (!list) return;
+    if (jLayer) jLayer.clearLayers();
 
-    list.innerHTML = "";
-    sightings.forEach(s => {
-      const li = el("li", "sighting");
-      li.innerHTML = `<div class="sighting-cam">${esc(s.camera_name || s.camera_id)}</div>
-        <div class="sighting-meta">${esc(fmtDateTime(s.timestamp))}</div>
-        ${s.direction ? `<div class="sighting-dir">heading ${esc(s.direction)}</div>` : ""}`;
-      list.appendChild(li);
+    const sorted = [...sightings_data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const coords = [];
+
+    // Draw path through all camera positions in order
+    sorted.forEach(s => {
+      const cam = state.camById[s.camera_id];
+      if (!cam) return;
+      const pos = cam.position || {};
+      const lat = Number(pos.lat), lng = Number(pos.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      coords.push([lat, lng]);
     });
+
+    if (coords.length > 1) {
+      L.polyline(coords, {
+        color: "#2dd4bf",
+        weight: 3,
+        opacity: 0.8,
+        dashArray: "7 4",
+      }).addTo(jLayer);
+    }
+
+    // Numbered markers for each sighting
+    sorted.forEach((s, i) => {
+      const cam = state.camById[s.camera_id];
+      if (!cam) return;
+      const pos = cam.position || {};
+      const lat = Number(pos.lat), lng = Number(pos.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      const popup = `
+        <div class="jm-popup">
+          <div class="jm-title">${esc(s.camera_id || "?")}</div>
+          <div class="jm-row"><span>Stop</span><strong>${i + 1} / ${sorted.length}</strong></div>
+          <div class="jm-row"><span>Time</span><strong>${esc(fmtDateTime(s.timestamp))}</strong></div>
+          ${s.lane ? `<div class="jm-row"><span>Lane</span><strong>${esc(s.lane)}</strong></div>` : ""}
+          ${s.direction ? `<div class="jm-dir">${esc(s.direction)}</div>` : ""}
+        </div>`;
+
+      L.circleMarker([lat, lng], {
+        radius: 9,
+        color: "#2dd4bf",
+        fillColor: "#0f172a",
+        fillOpacity: 0.92,
+        weight: 2.5,
+      }).bindPopup(popup).addTo(jLayer);
+    });
+
+    if (coords.length > 0) {
+      jmap.fitBounds(L.latLngBounds(coords), { padding: [35, 35], maxZoom: 14 });
+    }
+
+    // Render sightings list
+    sightings.innerHTML = "";
+    sorted.forEach((s, i) => {
+      const li = el("li", "sighting");
+      li.innerHTML = `
+        <div class="sighting-cam">${esc(s.camera_id || "?")}</div>
+        <div class="sighting-meta">${esc(fmtDateTime(s.timestamp))} &middot; ${esc(s.lane || "")}</div>
+        ${s.direction ? `<div class="sighting-dir">${esc(s.direction)}</div>` : ""}`;
+      sightings.appendChild(li);
+    });
+
+    if (grid) grid.hidden = false;
+    if (msg) msg.hidden = true;
   }
 
   /* ========================================================================
