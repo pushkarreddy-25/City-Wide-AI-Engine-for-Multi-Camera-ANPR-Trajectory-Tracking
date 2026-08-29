@@ -99,8 +99,6 @@
     camById: {},
     feed: new Map(),          // violation_id -> violation (dashboard live feed)
     seenAlerts: new Set(),    // ids we've already toasted
-    map: null, camLayer: null, vehLayer: null, camMarkers: {},
-    journeyMap: null, journeyLayer: null,
     charts: {},
     started: false,
     writeProtected: false,    // server wants a key before it accepts a write
@@ -110,54 +108,8 @@
 
   /* ========================================================================
      Third-party library loading
-     Leaflet and Chart.js load from a CDN in index.html. If that source is
-     blocked (corporate proxy, conference wifi, offline demo), retry from a
-     mirror before giving up — a blank map is the worst way to find out.
-     Vendor them into backend/static/vendor/ for a fully offline demo.
+     Chart.js loads from a CDN in index.html.
      ==================================================================== */
-  const LIB_SOURCES = {
-    L: [
-      "/vendor/leaflet.js",
-      "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
-    ],
-    Chart: [
-      "/vendor/chart.umd.min.js",
-      "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
-    ],
-  };
-
-  function loadScript(src) {
-    return new Promise(resolve => {
-      const s = document.createElement("script");
-      s.src = src;
-      s.async = false;
-      s.onload = () => resolve(true);
-      s.onerror = () => { s.remove(); resolve(false); };
-      document.head.appendChild(s);
-    });
-  }
-
-  /** Resolve true once `globalName` exists, trying each fallback source in turn. */
-  async function ensureLib(globalName) {
-    if (window[globalName]) return true;
-    for (const src of LIB_SOURCES[globalName] || []) {
-      await loadScript(src);
-      if (window[globalName]) return true;
-    }
-    return false;
-  }
-
-  function mapUnavailable(containerId, label) {
-    const box = document.getElementById(containerId);
-    if (!box) return;
-    box.innerHTML =
-      `<div class="map-down">
-         <b>${esc(label)} unavailable</b>
-         <span>The map library could not be loaded from the network.</span>
-         <span class="dim">Run <code>scripts\\vendor-assets.ps1</code> once to bundle it locally, then reload.</span>
-       </div>`;
-  }
 
   /* ========================================================================
      View router
@@ -171,87 +123,8 @@
     $$(".nav-item").forEach(b => b.setAttribute("aria-current", String(b.dataset.nav === name)));
     $$("[data-view-panel]").forEach(p => { p.hidden = (p.dataset.viewPanel !== name); });
     document.body.dataset.view = name;
-    if (name === "dashboard" && state.map) setTimeout(() => state.map.invalidateSize(), 60);
     if (name === "violations") loadViolations();
     if (name === "reports") loadActiveReport();
-  }
-
-  /* ========================================================================
-     Map (Leaflet) — camera nodes coloured by live congestion
-     ==================================================================== */
-  const hasLeaflet = () => typeof L !== "undefined";
-
-  function baseTiles() {
-    return L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      subdomains: "abcd", maxZoom: 20,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-    });
-  }
-
-  function camIcon(count, lvl) {
-    const n = Math.max(0, Math.round(num(count)));
-    const size = Math.max(30, Math.min(52, 30 + n * 1.6));
-    return L.divIcon({
-      className: "",
-      html: `<div class="cam-node" data-level="${level(lvl)}" style="width:${size}px;height:${size}px">
-               <div class="cam-ring"><span class="cam-count">${n}</span></div>
-             </div>`,
-      iconSize: [size, size], iconAnchor: [size / 2, size / 2],
-    });
-  }
-
-  function initMap() {
-    if (state.map) return;
-    if (!hasLeaflet()) { mapUnavailable("map", "Live operations map"); return; }
-    const map = L.map("map", { zoomControl: true, attributionControl: true }).setView([21.1458, 79.0882], 13);
-    baseTiles().addTo(map);
-    state.camLayer = L.layerGroup().addTo(map);
-    state.vehLayer = L.layerGroup().addTo(map);
-    state.map = map;
-
-    const pts = [];
-    state.cameras.forEach(c => {
-      const lat = c.position?.lat, lng = c.position?.lng;
-      if (lat == null || lng == null) return;
-      pts.push([lat, lng]);
-      const m = L.marker([lat, lng], { icon: camIcon(0, "low") }).addTo(state.camLayer);
-      m.bindPopup(`<div class="popup-cam-name">${esc(c.name)}</div>
-        <div class="popup-row">Speed limit ${esc(c.speed_limit_kmh)} km/h · ${esc(c.lanes?.length ?? c.lanes ?? "—")} lanes</div>
-        <div class="popup-row" id="pop-${esc(c.id)}">No congestion data yet</div>`);
-      state.camMarkers[c.id] = m;
-    });
-    if (pts.length) map.fitBounds(pts, { padding: [50, 50] });
-  }
-
-  function updateCongestion(cells) {
-    if (!state.map || !cells) return;
-    const byId = {};
-    cells.forEach(c => { byId[c.camera_id] = c; });
-    Object.entries(state.camMarkers).forEach(([id, marker]) => {
-      const cell = byId[id];
-      const count = num(cell?.vehicle_count);
-      const lvl = level(cell?.level);
-      marker.setIcon(camIcon(count, lvl));
-      const pop = document.getElementById(`pop-${id}`);
-      if (pop) pop.textContent = `${count} vehicles · ${lvl} congestion`;
-    });
-  }
-
-  function updateVehicleDots(vehicles) {
-    if (!state.map || !state.vehLayer) return;
-    state.vehLayer.clearLayers();
-    if (!$("#toggle-vehicles")?.checked) return;
-    vehicles.slice(0, 120).forEach(v => {
-      const lat = v.position?.lat, lng = v.position?.lng;
-      if (lat == null || lng == null) return;
-      // jitter around the camera so co-located vehicles are individually visible
-      const j = 0.0016;
-      const dot = L.marker([lat + (Math.random() - 0.5) * j, lng + (Math.random() - 0.5) * j], {
-        icon: L.divIcon({ className: "", html: `<div class="veh-dot"></div>`, iconSize: [8, 8], iconAnchor: [4, 4] }),
-        interactive: false,
-      });
-      state.vehLayer.addLayer(dot);
-    });
   }
 
   /* ========================================================================
@@ -297,10 +170,6 @@
     setStat("#stat-vehicles", stats.active_vehicles ?? vehicles.length);
     updateSpeedStat(vehicles);
     updateCongestionStat(congestion);
-
-    // map
-    updateCongestion(congestion);
-    updateVehicleDots(vehicles);
 
     // violations feed
     ingestAlerts(alerts);
@@ -583,7 +452,6 @@
       const traj = await api(`/api/vehicles/${encodeURIComponent(plate)}/journey?${p}`);
       renderJourney(traj);
       msg.hidden = true; result.hidden = false;
-      setTimeout(() => state.journeyMap && state.journeyMap.invalidateSize(), 60);
     } catch (e) {
       result.hidden = true; msg.hidden = false;
       msg.textContent = e.status === 404
@@ -605,26 +473,6 @@
         ${s.direction ? `<div class="sighting-dir">heading ${esc(s.direction)}</div>` : ""}`;
       list.appendChild(li);
     });
-
-    if (!hasLeaflet()) { mapUnavailable("journey-map", "Journey map"); return; }
-    if (!state.journeyMap) {
-      state.journeyMap = L.map("journey-map").setView([21.1458, 79.0882], 13);
-      baseTiles().addTo(state.journeyMap);
-      state.journeyLayer = L.layerGroup().addTo(state.journeyMap);
-    }
-    state.journeyLayer.clearLayers();
-    const pts = [];
-    sightings.forEach((s, i) => {
-      const lat = s.position?.lat, lng = s.position?.lng;
-      if (lat == null || lng == null) return;
-      pts.push([lat, lng]);
-      const color = i === 0 ? "#35d07f" : i === sightings.length - 1 ? "#ff3b47" : "#00e5d0";
-      L.circleMarker([lat, lng], { radius: 8, color: "#05080d", weight: 2, fillColor: color, fillOpacity: 1 })
-        .bindPopup(`<div class="popup-cam-name">${i + 1}. ${esc(s.camera_name || s.camera_id)}</div><div class="popup-row">${esc(fmtDateTime(s.timestamp))}</div>`)
-        .addTo(state.journeyLayer);
-    });
-    if (pts.length > 1) L.polyline(pts, { color: CHART_ACCENT, weight: 2, opacity: .65, dashArray: "6 7" }).addTo(state.journeyLayer);
-    if (pts.length) state.journeyMap.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
   }
 
   /* ========================================================================
@@ -768,13 +616,12 @@
   async function boot() {
     initNav(); initViolations(); initSearch(); initReports();
 
-    // Recover the map/chart libraries before anything tries to draw with them.
-    const [, hasChart] = await Promise.all([ensureLib("L"), ensureLib("Chart")]);
+    // Chart.js library is loaded from CDN in index.html
+    const hasChart = typeof Chart !== "undefined";
     if (hasChart) chartFont();
     $("#modal-close").addEventListener("click", closeModal);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-    $("#toggle-vehicles")?.addEventListener("change", () => { if (!$("#toggle-vehicles").checked) state.vehLayer?.clearLayers(); });
 
     try {
       state.cameras = await api("/api/cameras");
@@ -790,7 +637,6 @@
       state.readOnly = !!health.read_only;
     } catch { /* non-fatal */ }
 
-    initMap();
     await warmStart();
     connectWS();
   }

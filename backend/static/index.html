@@ -11,8 +11,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
 
-  <!-- Leaflet's stylesheet, tried in order: vendored copy (offline-safe) -> cdnjs
-       -> unpkg. External file, not inline, so the CSP can refuse inline scripts. -->
   <script src="/assets.js"></script>
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -101,19 +99,6 @@
       </div>
 
       <div class="dash-grid">
-        <section class="panel panel-map">
-          <div class="panel-head">
-            <h2 class="eyebrow">Live operations map</h2>
-            <label class="toggle">
-              <input type="checkbox" id="toggle-vehicles" checked />
-              <span>Show vehicle activity</span>
-            </label>
-          </div>
-          <div id="map" class="map"></div>
-          <!-- Decorative sweep: sits above the tiles, below the camera markers. -->
-          <div class="radar" aria-hidden="true"></div>
-        </section>
-
         <section class="panel panel-feed">
           <div class="panel-head">
             <h2 class="eyebrow">Live violation feed</h2>
@@ -203,16 +188,10 @@
       </form>
 
       <div class="search-result" id="search-result" hidden>
-        <div class="journey-grid">
-          <section class="panel">
-            <div class="panel-head"><h2 class="eyebrow">Journey path</h2><span class="mono dim" id="j-plate"></span></div>
-            <div id="journey-map" class="map map-sm"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><h2 class="eyebrow">Sightings</h2><span class="mono dim" id="j-count"></span></div>
-            <ol class="sightings" id="sightings"></ol>
-          </section>
-        </div>
+        <section class="panel">
+          <div class="panel-head"><h2 class="eyebrow">Sightings</h2><span class="mono dim" id="j-count"></span></div>
+          <ol class="sightings" id="sightings"></ol>
+        </section>
       </div>
       <p class="search-msg" id="search-msg" hidden></p>
     </section>
@@ -294,10 +273,9 @@
     </div>
   </div>
 
-  <!-- Map + chart libraries. app.js retries these from a fallback chain if the
-       primary source is blocked, so a filtered network can't blank the map.
+  <!-- Chart library. app.js retries from a fallback chain if the
+       primary source is blocked, so a filtered network can't blank the charts.
        Intentionally no SRI hash — see the note in assets.js. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="/app.js"></script>
 </body>
