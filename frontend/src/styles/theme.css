@@ -47,6 +47,7 @@ canvas { display: block; }
   /* signal — cyan is the system talking about itself */
   --cyan:      #00e5d0;
   --cyan-soft: #7ef2e6;
+  --cyan-strong: #7df4ff;
   --cyan-dim:  #0d5f59;
   --cyan-wash: rgba(0, 229, 208, .09);
 
@@ -164,9 +165,10 @@ body::before {
   gap: 11px;
   min-width: 0;
   padding: 0 14px;
-  background: linear-gradient(180deg, #08111a, var(--void));
+  background: linear-gradient(180deg, rgba(11,17,24,.96), rgba(5,8,13,.98));
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
+  box-shadow: inset 0 -1px 0 rgba(0,229,208,.12);
 }
 
 .topbar {
@@ -177,8 +179,9 @@ body::before {
   align-items: center;
   gap: 22px;
   padding: 0 18px;
-  background: linear-gradient(180deg, #08111a, var(--void));
+  background: linear-gradient(180deg, rgba(8,17,26,.98), rgba(5,8,13,.98));
   border-bottom: 1px solid var(--rule);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
 }
 /* hairline of signal along the bottom edge, brightest under the brand */
 .brand::after,
@@ -199,20 +202,21 @@ body::before {
   height: 22px;
   flex: none;
   border: 1px solid var(--cyan-dim);
+  box-shadow: inset 0 0 0 1px rgba(0,229,208,.08), 0 0 14px rgba(0,229,208,.14);
 }
 .brand-mark::before {
   content: "";
   position: absolute;
   inset: 4px;
-  border: 1px solid var(--cyan);
-  opacity: .5;
+  border: 1px solid var(--cyan-strong);
+  opacity: .7;
 }
 .brand-mark::after {
   content: "";
   position: absolute;
   inset: 9px;
-  background: var(--cyan);
-  box-shadow: 0 0 8px var(--cyan);
+  background: linear-gradient(180deg, var(--cyan-strong), var(--cyan));
+  box-shadow: 0 0 10px rgba(0,229,208,.8);
 }
 
 .brand-name {
@@ -251,11 +255,12 @@ body::before {
   padding: 6px 11px;
   border: 1px solid var(--rule-hi);
   border-radius: var(--r);
-  background: var(--deck);
+  background: linear-gradient(180deg, rgba(13,21,30,.9), rgba(10,16,23,.96));
   font: var(--label);
   letter-spacing: var(--track);
   text-transform: uppercase;
   color: var(--ink-dim);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
 }
 .conn-dot {
   width: 7px; height: 7px;
@@ -301,7 +306,7 @@ body::before {
   letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--ink-dim);
-  transition: color .14s, background-color .14s;
+  transition: color .14s, background-color .14s, box-shadow .14s;
 }
 /* Tick bar: empty rule when idle, filled signal when current. Position, not
    colour, is what tells you where you are. */
@@ -314,14 +319,19 @@ body::before {
   background: var(--rule-hi);
   transition: height .16s, background-color .16s;
 }
-.nav-item:hover { color: var(--ink); background: var(--deck-2); }
+.nav-item:hover {
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(17,25,33,.95), rgba(10,15,21,.98));
+  box-shadow: inset 0 0 0 1px rgba(0,229,208,.04);
+}
 /* React Router marks the current route with .active; the static dashboard uses
    aria-current. Both mean the same thing, so both get the same treatment. */
 .nav-item.active,
 .nav-item[aria-current="page"],
 .nav-item[aria-current="true"] {
   color: var(--cyan-soft);
-  background: var(--cyan-wash);
+  background: linear-gradient(90deg, rgba(0,229,208,.10), rgba(0,229,208,.04));
+  box-shadow: inset 0 0 0 1px rgba(0,229,208,.08);
 }
 .nav-item.active::before,
 .nav-item[aria-current="page"]::before,
@@ -544,13 +554,19 @@ body::before {
   translate: -50% -50%;
   background: conic-gradient(
     from 0deg,
-    rgba(0, 229, 208, .18),
-    rgba(0, 229, 208, .10) 6%,
-    rgba(0, 229, 208, .03) 18%,
-    rgba(0, 229, 208, 0) 32%,
+    rgba(0, 229, 208, .22),
+    rgba(0, 229, 208, .12) 8%,
+    rgba(0, 229, 208, .04) 18%,
+    rgba(0, 229, 208, 0) 30%,
     rgba(0, 229, 208, 0) 100%);
-  filter: blur(1px);
+  filter: blur(1.2px);
   animation: sweep 16s linear infinite;
+}
+.radar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0,229,208,.06), transparent 58%);
 }
 @keyframes sweep { to { rotate: 360deg; } }
 
@@ -779,7 +795,7 @@ body::before {
   padding: 8px 14px;
   border: 1px solid var(--rule-hi);
   border-radius: var(--r);
-  background: var(--deck-2);
+  background: linear-gradient(180deg, rgba(18,26,33,.96), rgba(11,16,22,.96));
   color: var(--ink-dim);
   font-family: var(--display);
   font-size: 11px;
@@ -787,9 +803,14 @@ body::before {
   letter-spacing: .13em;
   text-transform: uppercase;
   white-space: nowrap;
-  transition: color .13s, border-color .13s, background-color .13s;
+  transition: color .13s, border-color .13s, background-color .13s, transform .12s ease;
 }
-.btn:hover { color: var(--ink); border-color: var(--cyan-dim); background: var(--deck-3); }
+.btn:hover {
+  color: var(--ink);
+  border-color: var(--cyan-dim);
+  background: linear-gradient(180deg, rgba(21,31,40,.98), rgba(12,18,23,.96));
+  transform: translateY(-1px);
+}
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary {
   background: var(--cyan-wash);
@@ -1084,10 +1105,17 @@ input[type="date"] { font-family: var(--mono); }
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--ink-mute);
-  transition: color .13s, border-color .13s;
+  transition: color .13s, border-color .13s, background-color .13s;
 }
-.tab:hover { color: var(--ink-dim); }
-.tab[aria-selected="true"] { color: var(--cyan); border-bottom-color: var(--cyan); }
+.tab:hover {
+  color: var(--ink-dim);
+  background: rgba(255,255,255,.01);
+}
+.tab[aria-selected="true"] {
+  color: var(--cyan-strong);
+  border-bottom-color: var(--cyan);
+  background: linear-gradient(180deg, rgba(0,229,208,.04), transparent);
+}
 
 .tab-panel { display: flex; flex-direction: column; gap: var(--gap); }
 
