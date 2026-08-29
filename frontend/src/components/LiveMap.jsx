@@ -102,9 +102,8 @@ export function LiveMap({ cameras = [], congestion = [], vehicles = [], showVehi
   return (
     <MapContainer center={NAGPUR} zoom={13} className="map" zoomControl>
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        subdomains="abcd"
-        attribution="&copy; OpenStreetMap &copy; CARTO"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="&copy; OpenStreetMap contributors"
       />
       <MapLayers cameras={cameras} congestion={congestion} vehicles={vehicles} showVehicles={showVehicles} />
     </MapContainer>

@@ -15,8 +15,10 @@ function JourneyMap({ sightings }) {
   const center = pts.length ? pts[0] : NAGPUR;
   return (
     <MapContainer center={center} zoom={13} className="map map-sm">
-      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" subdomains="abcd"
-                 attribution="&copy; OpenStreetMap &copy; CARTO" />
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="&copy; OpenStreetMap contributors"
+      />
       {pts.length > 1 && <Polyline positions={pts} pathOptions={{ color: HOP.mid, weight: 2, opacity: 0.75, dashArray: "5 7" }} />}
       {sightings.map((s, i) => {
         const lat = s.position?.lat, lng = s.position?.lng;
