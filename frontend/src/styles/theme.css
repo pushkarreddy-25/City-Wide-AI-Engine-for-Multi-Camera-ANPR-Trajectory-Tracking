@@ -543,32 +543,42 @@ body::before {
   z-index: 450;
   overflow: hidden;
   pointer-events: none;
-  opacity: 0.9;
-  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.10), transparent 58%);
+  opacity: 0.96;
+  background:
+    radial-gradient(circle at center, rgba(14, 165, 233, 0.12), transparent 52%),
+    radial-gradient(circle at center, rgba(255,255,255,0.35), transparent 72%);
 }
 .radar::before {
   content: "";
   position: absolute;
   left: 50%; top: 50%;
-  width: 180%;
+  width: 190%;
   aspect-ratio: 1;
   translate: -50% -50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(14, 116, 144, 0.42),
-    rgba(56, 189, 248, 0.20) 10%,
-    rgba(14, 116, 144, 0.08) 22%,
-    rgba(14, 116, 144, 0.00) 38%,
-    rgba(14, 116, 144, 0.00) 100%);
-  box-shadow: inset 0 0 24px rgba(255,255,255,0.35);
-  filter: blur(1.2px);
-  animation: sweep 16s linear infinite;
+  background:
+    radial-gradient(circle at center, rgba(14,165,233,0.16), transparent 34%),
+    conic-gradient(
+      from 0deg,
+      rgba(14, 116, 144, 0.00),
+      rgba(14, 116, 144, 0.42) 8%,
+      rgba(14, 116, 144, 0.2) 15%,
+      rgba(14, 116, 144, 0.08) 28%,
+      rgba(14, 116, 144, 0.00) 42%,
+      rgba(14, 116, 144, 0.00) 100%);
+  box-shadow:
+    inset 0 0 26px rgba(255, 255, 255, 0.35),
+    0 0 24px rgba(14, 165, 233, 0.18);
+  filter: blur(1.8px);
+  animation: sweep 12s linear infinite;
+  transform-origin: center;
 }
 .radar::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.09), transparent 58%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), transparent 18%, transparent 82%, rgba(255,255,255,0.18)),
+    radial-gradient(circle at center, rgba(14,165,233,0.09), transparent 58%);
 }
 @keyframes sweep { to { rotate: 360deg; } }
 
