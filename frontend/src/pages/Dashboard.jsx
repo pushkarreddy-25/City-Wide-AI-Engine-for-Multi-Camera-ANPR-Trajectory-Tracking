@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { LiveMap } from "../components/LiveMap.jsx";
 import { PlateChip, Severity } from "../components/PlateChip.jsx";
 import { congestionIndex, fmtTime, prettyType } from "../services/format.js";
 
@@ -43,6 +44,14 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
       </div>
 
       <div className="dash-grid">
+        <section className="panel panel-map">
+          <div className="panel-head">
+            <h2 className="eyebrow">Camera density</h2>
+            <span className="feed-count mono">{vehicles.length} active</span>
+          </div>
+          <LiveMap cameras={cameras} vehicles={vehicles} />
+        </section>
+
         <section className="panel panel-feed">
           <div className="panel-head">
             <h2 className="eyebrow">Live violation feed</h2>
