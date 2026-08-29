@@ -535,10 +535,15 @@
 
   function renderJourney(traj) {
     const sightings = traj.sightings || [];
-    $("#j-plate").textContent = traj.plate || "";
-    $("#j-count").textContent = `${sightings.length} sighting${sightings.length === 1 ? "" : "s"}`;
+    const plateEl = $("#j-plate");
+    const countEl = $("#j-count");
+    const list = $("#sightings");
 
-    const list = $("#sightings"); list.innerHTML = "";
+    if (plateEl) plateEl.textContent = traj.plate || "";
+    if (countEl) countEl.textContent = `${sightings.length} sighting${sightings.length === 1 ? "" : "s"}`;
+    if (!list) return;
+
+    list.innerHTML = "";
     sightings.forEach(s => {
       const li = el("li", "sighting");
       li.innerHTML = `<div class="sighting-cam">${esc(s.camera_name || s.camera_id)}</div>
