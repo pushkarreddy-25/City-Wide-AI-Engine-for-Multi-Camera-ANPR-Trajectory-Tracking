@@ -13,7 +13,6 @@ Engine. It renders the same views as the zero-build dashboard shipped in
 
 - **React 18** + **Vite 5** (fast dev server, HMR)
 - **react-router-dom** — client-side routing (Dashboard / Violations / Search / Reports)
-- **react-leaflet** + **Leaflet** — live operations map with congestion-coloured camera nodes
 - **react-chartjs-2** + **Chart.js** — report charts
 - No global state library; the live WebSocket snapshot flows through a single hook.
 
@@ -55,7 +54,7 @@ src/
   hooks/
     useLiveSnapshot.js     WebSocket /ws/vehicles → snapshot + rolling feed
   components/
-    Topbar.jsx  Sidebar.jsx  LiveMap.jsx  ViolationModal.jsx
+    Topbar.jsx  Sidebar.jsx  ViolationModal.jsx
     PlateChip.jsx  ToastHost.jsx
   pages/
     Dashboard.jsx  Violations.jsx  Search.jsx  Reports.jsx
