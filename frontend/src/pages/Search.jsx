@@ -1,9 +1,53 @@
-import { useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
 import { api } from "../services/api.js";
-import { fmtDateTime, todayISO } from "../services/format.js";
+import { fmtDateTime, prettyType, todayISO } from "../services/format.js";
 
-function JourneyMap({ sightings = [] }) {
+/* ──────────────────────────────────────────────
+   Plate normalisation — strip separators, uppercase
+────────────────────────────────────────────── */
+function normalisePlate(raw) {
+  return raw.replace(/[\s\-]/g, "").toUpperCase();
+}
+
+/* ──────────────────────────────────────────────
+   Haversine distance between two {lat,lng} points (km)
+────────────────────────────────────────────── */
+function haversineKm(a, b) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/* ──────────────────────────────────────────────
+   Map auto-fit helper
+────────────────────────────────────────────── */
+function FitBounds({ coords }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords.length >= 2) map.fitBounds(coords, { padding: [40, 40] });
+    else if (coords.length === 1) map.setView(coords[0], 14);
+  }, [map, coords]);
+  return null;
+}
+
+const VIO_COLOR = {
+  red_light: "#ff3b47",
+  over_speed: "#ffb020",
+  speeding: "#ffb020",
+  wrong_lane: "#00e5d0",
+};
+
+/* ──────────────────────────────────────────────
+   Journey Map
+────────────────────────────────────────────── */
+function JourneyMap({ sightings = [], violations = [] }) {
   const points = useMemo(
     () =>
       sightings
@@ -15,10 +59,20 @@ function JourneyMap({ sightings = [] }) {
           lng: s.position.lng,
           direction: s.direction,
           time: s.timestamp,
+          speed: s.speed_kmh,
           index,
         })),
     [sightings],
   );
+
+  const vioMap = useMemo(() => {
+    const m = {};
+    violations.forEach((v) => {
+      if (!m[v.camera_id]) m[v.camera_id] = [];
+      m[v.camera_id].push(v);
+    });
+    return m;
+  }, [violations]);
 
   if (!points.length) {
     return (
@@ -36,78 +90,255 @@ function JourneyMap({ sightings = [] }) {
   return (
     <div className="journey-map">
       <MapContainer
-        bounds={coords.length > 1 ? coords : [[points[0].lat, points[0].lng]]}
+        center={[points[0].lat, points[0].lng]}
+        zoom={13}
         scrollWheelZoom
         className="journey-map-inner"
         style={{ height: "100%", width: "100%", minHeight: "500px" }}
-        zoom={13}
         minZoom={7}
         maxZoom={18}
       >
+        <FitBounds coords={coords} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
-        <Polyline positions={coords} pathOptions={{ color: "#00e5d0", weight: 4, opacity: 0.9 }} />
-
-        {points.map((point) => (
-          <CircleMarker
-            key={point.id}
-            center={[point.lat, point.lng]}
-            radius={7}
-            pathOptions={{
-              color: "#0ea5e9",
-              fillColor: "#00e5d0",
-              fillOpacity: 0.95,
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <div className="map-popup">
-                <div className="map-popup-title">{point.name}</div>
-                <div className="map-popup-row">
-                  <span>Stop</span>
-                  <strong>{point.index + 1}</strong>
-                </div>
-                {point.direction && (
-                  <div className="map-popup-row muted">
-                    <span>Heading</span>
-                    <strong>{point.direction}</strong>
+        <Polyline positions={coords} pathOptions={{ color: "#00e5d0", weight: 4, opacity: 0.85 }} />
+        {points.map((point) => {
+          const pointVios = vioMap[point.camera_id] || [];
+          const hasVio = pointVios.length > 0;
+          const markerColor = hasVio ? (VIO_COLOR[pointVios[0]?.type] || "#ff3b47") : "#00e5d0";
+          return (
+            <CircleMarker
+              key={point.id}
+              center={[point.lat, point.lng]}
+              radius={hasVio ? 11 : 8}
+              pathOptions={{
+                color: hasVio ? markerColor : "#0ea5e9",
+                fillColor: markerColor,
+                fillOpacity: 0.95,
+                weight: hasVio ? 3 : 2,
+              }}
+            >
+              <Popup maxWidth={220}>
+                <div className="map-popup">
+                  <div className="map-popup-title">
+                    <span className="stop-badge">#{point.index + 1}</span> {point.name}
                   </div>
-                )}
-                <div className="map-popup-row muted">
-                  <span>Time</span>
-                  <strong>{fmtDateTime(point.time)}</strong>
+                  <div className="map-popup-row">
+                    <span>Time</span>
+                    <strong>{fmtDateTime(point.time)}</strong>
+                  </div>
+                  {point.speed != null && (
+                    <div className="map-popup-row">
+                      <span>Speed</span>
+                      <strong>{point.speed} km/h</strong>
+                    </div>
+                  )}
+                  {point.direction && (
+                    <div className="map-popup-row muted">
+                      <span>Heading</span>
+                      <strong>{point.direction}</strong>
+                    </div>
+                  )}
+                  {hasVio && (
+                    <div className="map-popup-row" style={{ color: markerColor, marginTop: 6 }}>
+                      <span>Violation</span>
+                      <strong>{prettyType(pointVios[0]?.type)}</strong>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );
 }
 
-export function Search() {
-  const [plate, setPlate] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [traj, setTraj] = useState(null);
-  const [msg, setMsg] = useState(null);
+/* ──────────────────────────────────────────────
+   Plate suggestion dropdown
+────────────────────────────────────────────── */
+function Suggestions({ plate, onSelect }) {
+  const [items, setItems] = useState([]);
+  const timerRef = useRef(null);
 
-  async function submit(e) {
+  useEffect(() => {
+    if (plate.length < 3) { setItems([]); return; }
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.searchJourneys(plate, { limit: 8 });
+        setItems(res.results || []);
+      } catch { setItems([]); }
+    }, 350);
+    return () => clearTimeout(timerRef.current);
+  }, [plate]);
+
+  if (!items.length) return null;
+
+  return (
+    <ul className="plate-suggestions">
+      {items.map((it) => (
+        <li key={`${it.plate}-${it.date}`} className="plate-suggestion-item"
+            onClick={() => { onSelect(it.plate); setItems([]); }}>
+          <span className="mono">{it.plate}</span>
+          <span className="dim">{it.date} · {it.sighting_count} stop{it.sighting_count !== 1 ? "s" : ""}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Journey KPI summary bar
+────────────────────────────────────────────── */
+function JourneySummary({ traj, violations }) {
+  const stats = useMemo(() => {
+    const sightings = traj.sightings || [];
+    const geo = sightings.filter(
+      (s) => s?.position && Number.isFinite(s.position.lat) && Number.isFinite(s.position.lng),
+    );
+    let distKm = 0;
+    for (let i = 1; i < geo.length; i++) distKm += haversineKm(geo[i - 1].position, geo[i].position);
+
+    const times = sightings.map((s) => s.timestamp && new Date(s.timestamp)).filter(Boolean);
+    const durationMs = times.length >= 2 ? Math.max(...times) - Math.min(...times) : 0;
+    const durationMin = Math.round(durationMs / 60000);
+
+    const speeds = sightings.map((s) => s.speed_kmh).filter((x) => typeof x === "number" && x > 0);
+    const avgSpeed = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : null;
+
+    return { stops: sightings.length, distKm: distKm.toFixed(1), durationMin, avgSpeed };
+  }, [traj]);
+
+  return (
+    <div className="journey-kpi-row">
+      <div className="journey-kpi">
+        <span className="journey-kpi-val">{stats.stops}</span>
+        <span className="journey-kpi-lbl">Camera stops</span>
+      </div>
+      <div className="journey-kpi">
+        <span className="journey-kpi-val">{stats.distKm} km</span>
+        <span className="journey-kpi-lbl">Est. distance</span>
+      </div>
+      <div className="journey-kpi">
+        <span className="journey-kpi-val">{stats.durationMin > 0 ? `${stats.durationMin}m` : "—"}</span>
+        <span className="journey-kpi-lbl">Trip duration</span>
+      </div>
+      {stats.avgSpeed != null && (
+        <div className="journey-kpi">
+          <span className="journey-kpi-val">{stats.avgSpeed} km/h</span>
+          <span className="journey-kpi-lbl">Avg speed</span>
+        </div>
+      )}
+      {violations.length > 0 && (
+        <div className="journey-kpi journey-kpi--vio">
+          <span className="journey-kpi-val">{violations.length}</span>
+          <span className="journey-kpi-lbl">Violation{violations.length !== 1 ? "s" : ""}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Visual vertical timeline
+────────────────────────────────────────────── */
+function Timeline({ sightings, violations }) {
+  const vioMap = useMemo(() => {
+    const m = {};
+    violations.forEach((v) => {
+      if (!m[v.camera_id]) m[v.camera_id] = [];
+      m[v.camera_id].push(v);
+    });
+    return m;
+  }, [violations]);
+
+  return (
+    <ol className="journey-timeline">
+      {sightings.map((s, i) => {
+        const camVios = vioMap[s.camera_id] || [];
+        const isLast = i === sightings.length - 1;
+        return (
+          <li key={`${s.camera_id || "cam"}-${i}`} className={`tl-item${camVios.length ? " tl-item--vio" : ""}`}>
+            <div className="tl-node">
+              <span className="tl-number">{i + 1}</span>
+              {!isLast && <span className="tl-line" />}
+            </div>
+            <div className="tl-body">
+              <div className="tl-cam">{s.camera_name || s.camera_id}</div>
+              <div className="tl-meta">
+                <span>{fmtDateTime(s.timestamp)}</span>
+                {s.speed_kmh != null && <span className="tl-speed">{s.speed_kmh} km/h</span>}
+                {s.direction && <span className="tl-dir dim">{s.direction}</span>}
+              </div>
+              {camVios.map((v, vi) => (
+                <span key={vi} className="tl-vio-pill" data-vtype={v.type}>
+                  ⚠ {prettyType(v.type)}
+                  {v.speed_kmh != null && ` · ${v.speed_kmh} km/h`}
+                </span>
+              ))}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Camera list hook
+────────────────────────────────────────────── */
+function useCameras() {
+  const [cams, setCams] = useState([]);
+  useEffect(() => {
+    api.cameras().then(setCams).catch(() => setCams([]));
+  }, []);
+  return cams;
+}
+
+/* ──────────────────────────────────────────────
+   Main Search page
+────────────────────────────────────────────── */
+export function Search() {
+  const [plate, setPlate]           = useState("");
+  const [dateFrom, setDateFrom]     = useState("");
+  const [dateTo, setDateTo]         = useState(todayISO());
+  const [cameraId, setCameraId]     = useState("");
+  const [traj, setTraj]             = useState(null);
+  const [violations, setViolations] = useState([]);
+  const [isApprox, setIsApprox]     = useState(false);
+  const [loading, setLoading]       = useState(false);
+  const [msg, setMsg]               = useState(null);
+  const cameras                     = useCameras();
+
+  const submit = useCallback(async (e) => {
     e.preventDefault();
-    const p = plate.trim();
+    const p = normalisePlate(plate.trim());
     if (!p) { setMsg("Enter a license plate to search."); setTraj(null); return; }
-    setMsg("Searching…"); setTraj(null);
+    setMsg(null); setTraj(null); setLoading(true);
     try {
-      const t = await api.journey(p, date);
-      setTraj(t); setMsg(null);
+      const t = await api.journey(p, {
+        dateFrom: dateFrom || undefined,
+        dateeTo: dateTo || undefined,
+        cameraId: cameraId || undefined,
+      });
+      setTraj(t);
+      setViolations(t.violations || []);
+      setIsApprox(!!t.is_approximate);
     } catch (err) {
       setTraj(null);
-      setMsg(err.status === 404 ? `No journey found for ${p}${date ? " on " + date : ""}.` : `Search failed (${err.message}).`);
+      setMsg(
+        err.status === 404
+          ? `No journey or detections found for "${plate.trim()}"${dateTo ? " up to " + dateTo : ""}.`
+          : `Search failed — ${err.message}.`,
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [plate, dateFrom, dateTo, cameraId]);
 
   const sightings = traj?.sightings || [];
 
@@ -120,47 +351,85 @@ export function Search() {
         </div>
       </div>
 
-      <form className="search-bar" onSubmit={submit}>
-        <label className="field grow">
-          <span>License plate</span>
-          <input className="mono" placeholder="MH-31-AB-1234" value={plate}
-                 onChange={(e) => setPlate(e.target.value)} autoComplete="off" />
-        </label>
-        <label className="field">
-          <span>Date</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </label>
-        <button className="btn btn-primary" type="submit">Search journey</button>
+      <form className="search-bar search-bar--advanced" onSubmit={submit}>
+        <div className="search-row">
+          <label className="field grow search-plate-wrap">
+            <span>License plate</span>
+            <div className="plate-input-wrap">
+              <input
+                id="journey-plate-input"
+                className="mono"
+                placeholder="MH-31-AB-1234 or partial…"
+                value={plate}
+                onChange={(e) => setPlate(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="characters"
+              />
+              <Suggestions plate={normalisePlate(plate)} onSelect={(p) => setPlate(p)} />
+            </div>
+          </label>
+
+          <label className="field">
+            <span>From</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>To</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>Camera</span>
+            <select value={cameraId} onChange={(e) => setCameraId(e.target.value)}>
+              <option value="">All cameras</option>
+              {cameras.map((c) => (
+                <option key={c.id} value={c.id}>{c.name || c.id}</option>
+              ))}
+            </select>
+          </label>
+
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? "Searching\u2026" : "Search journey"}
+          </button>
+        </div>
       </form>
 
-      {traj && (
-        <div className="journey-grid">
-          <section className="panel panel-journey-map">
-            <div className="panel-head">
-              <h2 className="eyebrow">Journey map</h2>
-              <span className="mono dim">{traj.plate}</span>
-            </div>
-            <JourneyMap sightings={sightings} />
-          </section>
-
-          <section className="panel">
-            <div className="panel-head">
-              <h2 className="eyebrow">Sightings</h2>
-              <span className="mono dim">{sightings.length} stops</span>
-            </div>
-            <ol className="sightings">
-              {sightings.map((s, i) => (
-                <li key={`${s.camera_id || "camera"}-${i}`} className="sighting">
-                  <div className="sighting-cam">{s.camera_name || s.camera_id}</div>
-                  <div className="sighting-meta">{fmtDateTime(s.timestamp)}</div>
-                  {s.direction && <div className="sighting-dir">heading {s.direction}</div>}
-                </li>
-              ))}
-            </ol>
-          </section>
+      {traj && isApprox && (
+        <div className="alert-banner" style={{ marginTop: "var(--gap)" }}>
+          <span>⚠</span>
+          <span>
+            <strong>Approximate journey</strong> — reconstructed from individual camera detections. No linked
+            trajectory found; sightings are deduplicated per camera per hour.
+          </span>
         </div>
       )}
+
+      {traj && (
+        <>
+          <JourneySummary traj={traj} violations={violations} />
+          <div className="journey-grid">
+            <section className="panel panel-journey-map">
+              <div className="panel-head">
+                <h2 className="eyebrow">Journey map</h2>
+                <span className="mono dim">{traj.plate}</span>
+              </div>
+              <JourneyMap sightings={sightings} violations={violations} />
+            </section>
+
+            <section className="panel">
+              <div className="panel-head">
+                <h2 className="eyebrow">Timeline</h2>
+                <span className="mono dim">{sightings.length} stop{sightings.length !== 1 ? "s" : ""}</span>
+              </div>
+              <Timeline sightings={sightings} violations={violations} />
+            </section>
+          </div>
+        </>
+      )}
+
       {msg && <p className="search-msg">{msg}</p>}
     </section>
   );
 }
+

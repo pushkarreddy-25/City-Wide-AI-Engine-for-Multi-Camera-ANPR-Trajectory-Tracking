@@ -119,7 +119,106 @@ def get_journey(db: Session, plate: str, on_date: Optional[date_cls] = None) -> 
     return q.order_by(Trajectory.date.desc(), Trajectory.trajectory_id.desc()).first()
 
 
-# -- violations -------------------------------------------------------------
+def search_journeys(
+    db: Session,
+    plate_fragment: str,
+    date_from: Optional[date_cls] = None,
+    date_to: Optional[date_cls] = None,
+    camera_id: Optional[str] = None,
+    limit: int = 20,
+) -> list:
+    """Search trajectories by partial plate (case-insensitive LIKE)."""
+    pattern = f"%{like_escape(plate_fragment.upper())}%"
+    q = db.query(Trajectory).filter(Trajectory.plate_text.like(pattern, escape="\\"))
+    if date_from:
+        q = q.filter(Trajectory.date >= date_from)
+    if date_to:
+        q = q.filter(Trajectory.date <= date_to)
+    if camera_id:
+        # filter trajectories that have at least one sighting on this camera
+        q = q.join(Sighting, Sighting.trajectory_id == Trajectory.trajectory_id).filter(
+            Sighting.camera_id == camera_id
+        ).distinct()
+    return q.order_by(Trajectory.date.desc(), Trajectory.trajectory_id.desc()).limit(limit).all()
+
+
+def detections_for_plate(
+    db: Session,
+    plate: str,
+    date_from: Optional[date_cls] = None,
+    date_to: Optional[date_cls] = None,
+    camera_id: Optional[str] = None,
+    limit: int = 200,
+) -> list:
+    """Fetch raw Detection rows for a plate and synthesise a sightings list.
+
+    This is the fallback when no Trajectory row has been persisted yet — the
+    caller gets a dict in the same shape as Trajectory.to_dict() so the frontend
+    can render the journey identically.
+    """
+    plate_up = plate.upper()
+    q = db.query(Detection).filter(Detection.plate_text == plate_up)
+    if date_from:
+        q = q.filter(func.date(Detection.timestamp) >= date_from)
+    if date_to:
+        q = q.filter(func.date(Detection.timestamp) <= date_to)
+    if camera_id:
+        q = q.filter(Detection.camera_id == camera_id)
+
+    rows = q.order_by(Detection.timestamp.asc()).limit(limit).all()
+    if not rows:
+        return []
+
+    # Build camera metadata map from config
+    from utils.config import cameras as camera_config
+    cfg = camera_config()
+
+    # Synthesise sightings from Detection rows
+    sightings = []
+    seen_cam_ts: set = set()
+    for d in rows:
+        key = (d.camera_id, d.timestamp.date() if d.timestamp else None,
+               d.timestamp.hour if d.timestamp else None)
+        if key in seen_cam_ts:
+            continue
+        seen_cam_ts.add(key)
+        cam_cfg = cfg.get(d.camera_id, {})
+        lat = cam_cfg.get("latitude")
+        lng = cam_cfg.get("longitude")
+        sightings.append({
+            "camera_id": d.camera_id,
+            "camera_name": d.camera_name or cam_cfg.get("name", d.camera_id),
+            "timestamp": d.timestamp.replace(microsecond=0).isoformat() + "Z" if d.timestamp else None,
+            "position": {"lat": lat, "lng": lng},
+            "direction": None,
+            "speed_kmh": round(d.speed_kmh, 1) if d.speed_kmh else None,
+        })
+
+    first = rows[0]
+    return [{
+        "trajectory_id": None,
+        "plate": plate_up,
+        "date": first.timestamp.date().isoformat() if first.timestamp else None,
+        "type": first.vehicle_type,
+        "color": first.vehicle_color,
+        "sightings": sightings,
+        "is_approximate": True,
+    }]
+
+
+def violations_for_plate(db: Session, plate: str, limit: int = 50) -> list:
+    """Return all violations for a plate, ordered newest first."""
+    rows = (
+        db.query(Violation)
+        .filter(Violation.plate_text == plate.upper())
+        .order_by(Violation.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return [v.to_dict() for v in rows]
+
+
+
 def add_violation(db: Session, v: dict) -> Violation:
     violation_type = v.get("violation_type") or v.get("type")
     plate_text = (v.get("plate_text") or v.get("plate") or "").upper()

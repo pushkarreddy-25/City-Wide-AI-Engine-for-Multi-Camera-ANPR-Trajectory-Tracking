@@ -57,14 +57,43 @@ def search_vehicles(
         camera_id=camera_id, start=start, end=end, limit=limit, offset=offset)
 
 
-@router.get("/{plate}/journey", response_model=TrajectoryOut,
-            summary="Reconstructed cross-camera journey for a plate")
+@router.get("/search-journeys", summary="Partial-plate journey search")
+def search_journeys_endpoint(
+    plate: str = Query(..., min_length=2, max_length=20),
+    date_from: Optional[date_type] = None,
+    date_to: Optional[date_type] = None,
+    camera_id: Optional[str] = Query(None, max_length=32, pattern=CAMERA_ID_PATTERN),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Search for journeys by partial plate string. Returns summary rows."""
+    results = report_service.search_journeys(
+        db, plate_fragment=plate,
+        date_from=date_from, date_to=date_to,
+        camera_id=camera_id, limit=limit,
+    )
+    return {"results": results, "total": len(results)}
+
+
+@router.get("/{plate}/journey", summary="Reconstructed cross-camera journey for a plate")
 def vehicle_journey(
     plate: str = Path(..., min_length=2, max_length=20, pattern=PLATE_PATTERN),
     on_date: Optional[date_type] = Query(None, alias="date"),
+    date_from: Optional[date_type] = None,
+    date_to: Optional[date_type] = None,
+    camera_id: Optional[str] = Query(None, max_length=32, pattern=CAMERA_ID_PATTERN),
     db: Session = Depends(get_db),
 ):
-    traj = repository.get_journey(db, plate, on_date)
-    if traj is None:
-        raise HTTPException(status_code=404, detail="No journey found for that plate")
-    return traj.to_dict()
+    """Reconstruct a vehicle's cross-camera journey.
+
+    Falls back to raw detection records when no linked trajectory exists,
+    so the endpoint always returns data if the plate has been seen at all.
+    """
+    result = report_service.journey_search(
+        db, plate=plate,
+        on_date=on_date, date_from=date_from, date_to=date_to,
+        camera_id=camera_id,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="No journey or detections found for that plate")
+    return result
