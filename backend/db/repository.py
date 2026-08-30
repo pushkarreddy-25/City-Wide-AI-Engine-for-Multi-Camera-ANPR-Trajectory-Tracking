@@ -343,3 +343,84 @@ def _congestion_level(count: int, window_minutes: int) -> str:
     if per_min >= 3:
         return "medium"
     return "low"
+
+
+def average_city_speed(db: Session, window_minutes: int = 15) -> Optional[float]:
+    """Compute the mean speed (km/h) across active vehicles in the window.
+
+    Falls back to recent detections if the live window contains no detections.
+    """
+    since = datetime.utcnow() - timedelta(minutes=window_minutes)
+    avg_speed = (
+        db.query(func.avg(Detection.speed_kmh))
+        .filter(
+            Detection.timestamp >= since,
+            Detection.speed_kmh.isnot(None),
+            Detection.speed_kmh > 0,
+        )
+        .scalar()
+    )
+    if avg_speed is not None:
+        return round(float(avg_speed), 1)
+
+    recent_rows = (
+        db.query(Detection.speed_kmh)
+        .filter(Detection.speed_kmh.isnot(None), Detection.speed_kmh > 0)
+        .order_by(Detection.timestamp.desc())
+        .limit(100)
+        .all()
+    )
+    if recent_rows:
+        speeds = [float(r[0]) for r in recent_rows if r[0] is not None]
+        if speeds:
+            return round(sum(speeds) / len(speeds), 1)
+    return None
+
+
+def speed_summary(db: Session, window_minutes: int = 15) -> dict:
+    """Compute overall and per-camera speed statistics over a time window."""
+    since = datetime.utcnow() - timedelta(minutes=window_minutes)
+    rows = (
+        db.query(
+            Detection.camera_id,
+            func.avg(Detection.speed_kmh),
+            func.count(Detection.detection_id),
+        )
+        .filter(
+            Detection.timestamp >= since,
+            Detection.speed_kmh.isnot(None),
+            Detection.speed_kmh > 0,
+        )
+        .group_by(Detection.camera_id)
+        .all()
+    )
+    cam_stats = {cid: (float(avg) if avg else None, int(cnt)) for cid, avg, cnt in rows}
+    cams_cfg = camera_config()
+    by_camera = []
+    total_samples = 0
+    total_speed_sum = 0.0
+
+    for cid, cam in cams_cfg.items():
+        avg_s, cnt = cam_stats.get(cid, (None, 0))
+        if avg_s is not None and cnt > 0:
+            total_samples += cnt
+            total_speed_sum += avg_s * cnt
+        by_camera.append({
+            "camera_id": cid,
+            "camera_name": cam.get("name"),
+            "avg_speed_kmh": round(avg_s, 1) if avg_s is not None else None,
+            "sample_count": cnt,
+            "posted_limit": cam.get("speed_limit_kmh"),
+        })
+
+    avg_city = round(total_speed_sum / total_samples, 1) if total_samples > 0 else None
+    if avg_city is None:
+        avg_city = average_city_speed(db, window_minutes=window_minutes)
+
+    return {
+        "avg_city_speed": avg_city,
+        "sample_count": total_samples,
+        "window_minutes": window_minutes,
+        "by_camera": by_camera,
+    }
+

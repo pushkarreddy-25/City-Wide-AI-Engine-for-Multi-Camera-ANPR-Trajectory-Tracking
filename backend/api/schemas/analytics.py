@@ -38,3 +38,26 @@ class CameraOut(BaseModel):
     position: Position = Position()
     speed_limit_kmh: Optional[float] = None
     lanes: List[float] = []
+
+
+class LiveStatsOut(BaseModel):
+    active_vehicles: Optional[int] = None
+    fleet_size: Optional[int] = None
+    sim_time: Optional[str] = None
+    avg_city_speed: Optional[float] = None
+
+
+class CameraSpeedStat(BaseModel):
+    camera_id: Optional[str] = None
+    camera_name: Optional[str] = None
+    avg_speed_kmh: Optional[float] = None
+    sample_count: int = 0
+    posted_limit: Optional[float] = None
+
+
+class SpeedSummaryOut(BaseModel):
+    avg_city_speed: Optional[float] = None
+    sample_count: int = 0
+    window_minutes: int = 15
+    by_camera: List[CameraSpeedStat] = []
+

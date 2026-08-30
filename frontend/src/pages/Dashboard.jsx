@@ -17,9 +17,10 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
   const { vehicles = [], congestion = [], stats = {} } = snapshot;
 
   const avgSpeed = useMemo(() => {
+    if (typeof snapshot?.stats?.avg_city_speed === "number") return Math.round(snapshot.stats.avg_city_speed);
     const s = vehicles.map((v) => v.speed_kmh).filter((x) => typeof x === "number");
     return s.length ? Math.round(s.reduce((a, b) => a + b, 0) / s.length) : "—";
-  }, [vehicles]);
+  }, [vehicles, snapshot?.stats?.avg_city_speed]);
 
   const cong = useMemo(() => congestionIndex(congestion), [congestion]);
   const open = useMemo(() => feed.filter((v) => !v.resolved), [feed]);

@@ -21,6 +21,17 @@ MAX_VEHICLES = 200
 MAX_ALERTS = 100
 
 
+def _average_speed(vehicles: List[dict]) -> Optional[float]:
+    speeds = [
+        float(v["speed_kmh"])
+        for v in vehicles
+        if isinstance(v, dict) and isinstance(v.get("speed_kmh"), (int, float))
+    ]
+    if not speeds:
+        return None
+    return round(sum(speeds) / len(speeds), 1)
+
+
 def publish_vehicle(vehicle: dict) -> None:
     get_cache().push(KEY_VEHICLES, vehicle, maxlen=MAX_VEHICLES)
 
@@ -46,8 +57,22 @@ def get_congestion() -> List[dict]:
 
 
 def set_stats(stats: dict) -> None:
-    get_cache().set(KEY_STATS, stats)
+    payload = dict(stats or {})
+    if payload.get("avg_city_speed") is None:
+        payload["avg_city_speed"] = _average_speed(get_live_vehicles(200))
+    get_cache().set(KEY_STATS, payload)
 
 
-def get_stats() -> dict:
-    return get_cache().get(KEY_STATS) or {}
+def get_stats(db=None) -> dict:
+    stats = get_cache().get(KEY_STATS) or {}
+    if not isinstance(stats, dict):
+        stats = {}
+    else:
+        stats = dict(stats)
+    if stats.get("avg_city_speed") is None:
+        stats["avg_city_speed"] = _average_speed(get_live_vehicles(200))
+    if stats.get("avg_city_speed") is None and db is not None:
+        from db import repository
+        stats["avg_city_speed"] = repository.average_city_speed(db)
+    return stats
+

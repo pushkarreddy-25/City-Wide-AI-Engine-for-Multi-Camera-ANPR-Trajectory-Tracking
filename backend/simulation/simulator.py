@@ -191,11 +191,19 @@ class TrafficSimulator:
         self._advance(db)
         db.commit()
 
+        active_speeds = [
+            trip.visit["speed"]
+            for trip in self.active
+            if isinstance(trip.visit, dict) and trip.visit.get("speed") is not None
+        ]
+        avg_city_speed = round(sum(active_speeds) / len(active_speeds), 1) if active_speeds else None
+
         live_service.set_congestion(repository.congestion_snapshot(db))
         live_service.set_stats({
             "active_vehicles": len(self.active),
             "fleet_size": len(self.fleet),
             "sim_time": _iso(now),
+            "avg_city_speed": avg_city_speed,
         })
 
     def _advance(self, db):

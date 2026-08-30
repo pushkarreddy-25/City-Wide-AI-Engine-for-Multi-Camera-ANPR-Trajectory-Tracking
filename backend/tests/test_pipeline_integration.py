@@ -88,3 +88,27 @@ def test_search_and_resolve_flow(db_session):
         db_session.commit()
         assert resolved.resolved is True
         assert resolved.notes == "reviewed"
+
+
+def test_average_city_speed_and_speed_summary(db_session):
+    """Verify backend calculates average city speed and speed summary correctly from detections."""
+    t0 = datetime.utcnow()
+    repository.add_detection(db_session, {
+        "camera_id": "cam_1", "speed_kmh": 40.0, "timestamp": t0, "plate": "MH-31-AA-1111"
+    })
+    repository.add_detection(db_session, {
+        "camera_id": "cam_2", "speed_kmh": 60.0, "timestamp": t0, "plate": "MH-31-BB-2222"
+    })
+    db_session.commit()
+
+    avg = repository.average_city_speed(db_session, window_minutes=15)
+    assert avg == 50.0
+
+    summary = repository.speed_summary(db_session, window_minutes=15)
+    assert summary["avg_city_speed"] == 50.0
+    assert summary["sample_count"] == 2
+    assert len(summary["by_camera"]) == 5
+    cam1 = next(c for c in summary["by_camera"] if c["camera_id"] == "cam_1")
+    assert cam1["avg_speed_kmh"] == 40.0
+    assert cam1["sample_count"] == 1
+

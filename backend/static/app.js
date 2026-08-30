@@ -170,7 +170,7 @@
 
     // stat cards
     setStat("#stat-vehicles", stats.active_vehicles ?? vehicles.length);
-    updateSpeedStat(vehicles);
+    updateSpeedStat(stats, vehicles);
     updateCongestionStat(congestion);
 
     // live map
@@ -254,9 +254,14 @@
     if (num.textContent !== next) { num.textContent = next; num.classList.remove("flash"); void num.offsetWidth; num.classList.add("flash"); }
   }
 
-  function updateSpeedStat(vehicles) {
-    const speeds = vehicles.map(v => v.speed_kmh).filter(s => typeof s === "number");
-    const avg = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : "—";
+  function updateSpeedStat(stats, vehicles) {
+    let avg = stats?.avg_city_speed;
+    if (avg == null || typeof avg !== "number") {
+      const speeds = (vehicles || []).map(v => v.speed_kmh).filter(s => typeof s === "number");
+      avg = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : "—";
+    } else {
+      avg = Math.round(avg);
+    }
     setStat("#stat-speed", avg);
   }
 
@@ -771,14 +776,19 @@
   async function warmStart() {
     // seed the feed & congestion so the dashboard isn't blank before the first tick
     try {
-      const [alerts, cong] = await Promise.all([
+      const [alerts, cong, stats] = await Promise.all([
         api(`/api/violations/alerts?limit=30`).catch(() => ({ alerts: [] })),
         api(`/api/congestion/heatmap?window_minutes=10`).catch(() => []),
+        api(`/api/stats`).catch(() => ({})),
       ]);
       (alerts.alerts || []).forEach(v => { if (v.violation_id) { state.feed.set(v.violation_id, v); state.seenAlerts.add(v.violation_id); } });
       renderFeed();
       updateCongestion(cong);
       updateCongestionStat(cong);
+      if (stats && typeof stats === "object") {
+        if (stats.active_vehicles != null) setStat("#stat-vehicles", stats.active_vehicles);
+        if (stats.avg_city_speed != null) setStat("#stat-speed", Math.round(stats.avg_city_speed));
+      }
     } catch { /* non-fatal */ }
   }
 

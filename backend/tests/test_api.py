@@ -34,7 +34,23 @@ def test_live_vehicles_returns_a_list(client):
 def test_stats_endpoint_returns_object(client):
     r = client.get("/api/stats")
     assert r.status_code == 200
-    assert isinstance(r.json(), dict)
+    body = r.json()
+    assert isinstance(body, dict)
+    assert "avg_city_speed" in body
+
+
+def test_speed_summary_endpoint(client):
+    r = client.get("/api/reports/speed-summary?window_minutes=15")
+    assert r.status_code == 200
+    body = r.json()
+    assert "avg_city_speed" in body
+    assert "sample_count" in body
+    assert "window_minutes" in body
+    assert "by_camera" in body
+    assert len(body["by_camera"]) == 5
+    first = body["by_camera"][0]
+    assert {"camera_id", "camera_name", "avg_speed_kmh", "sample_count", "posted_limit"} <= set(first)
+
 
 
 def test_violation_alerts_shape(client):

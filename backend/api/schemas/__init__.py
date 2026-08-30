@@ -7,12 +7,15 @@ from api.schemas.violations import (
     CameraViolationCount, ViolationList, ViolationOut, ViolationsSummaryOut,
 )
 from api.schemas.analytics import (
-    CameraOut, CameraCount, CongestionCell, DailyVolumeOut, HourCount,
+    CameraCount, CameraOut, CameraSpeedStat, CongestionCell, DailyVolumeOut,
+    HourCount, LiveStatsOut, SpeedSummaryOut,
 )
 
 __all__ = [
     "BBox", "Pagination", "Position",
     "DetectionOut", "LiveVehicle", "SearchResults", "SightingOut", "TrajectoryOut",
     "CameraViolationCount", "ViolationList", "ViolationOut", "ViolationsSummaryOut",
-    "CameraOut", "CameraCount", "CongestionCell", "DailyVolumeOut", "HourCount",
+    "CameraOut", "CameraCount", "CameraSpeedStat", "CongestionCell", "DailyVolumeOut", "HourCount",
+    "LiveStatsOut", "SpeedSummaryOut",
 ]
+

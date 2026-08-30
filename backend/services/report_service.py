@@ -35,3 +35,12 @@ def vehicle_search(db, **filters) -> dict:
     rows, total = repository.search_detections(db, limit=limit, offset=offset, **filters)
     return {"total": total, "limit": limit, "offset": offset,
             "results": [r.to_dict() for r in rows]}
+
+
+def average_city_speed(db, window_minutes: int = 15) -> Optional[float]:
+    return repository.average_city_speed(db, window_minutes=window_minutes)
+
+
+def speed_summary(db, window_minutes: int = 15) -> dict:
+    return repository.speed_summary(db, window_minutes=window_minutes)
+

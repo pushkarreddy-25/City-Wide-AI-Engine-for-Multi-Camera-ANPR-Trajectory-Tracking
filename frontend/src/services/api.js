@@ -96,6 +96,7 @@ export const api = {
   congestion: (windowMinutes = 10) => req(`/api/congestion/heatmap${qs({ window_minutes: windowMinutes })}`),
   dailyVolume: (date) => req(`/api/reports/daily-volume${qs({ date })}`),
   violationsSummary: (hours = 24) => req(`/api/reports/violations-summary${qs({ hours })}`),
+  speedSummary: (windowMinutes = 15) => req(`/api/reports/speed-summary${qs({ window_minutes: windowMinutes })}`),
   purgeOldData: () => req("/api/admin/purge-old-data", { method: "POST", headers: writeHeaders() }),
   stats: () => req("/api/stats"),
 };

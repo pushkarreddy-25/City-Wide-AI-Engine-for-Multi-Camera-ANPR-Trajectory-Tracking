@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from api.schemas import CongestionCell, DailyVolumeOut, ViolationsSummaryOut
+from api.schemas import (
+    CongestionCell, DailyVolumeOut, LiveStatsOut, SpeedSummaryOut, ViolationsSummaryOut,
+)
 from api.security import require_write_access
 from db import repository
 from db.database import get_db
@@ -34,6 +36,13 @@ def violations_summary(hours: int = Query(24, ge=1, le=720), db: Session = Depen
     return report_service.violations_summary(db, hours=hours)
 
 
+@router.get("/reports/speed-summary", response_model=SpeedSummaryOut,
+            summary="Live and recent city-wide speed statistics")
+def speed_summary(window_minutes: int = Query(15, ge=1, le=120),
+                  db: Session = Depends(get_db)):
+    return report_service.speed_summary(db, window_minutes)
+
+
 @router.get("/reports/daily-volume.csv", summary="Export daily volume as CSV")
 def daily_volume_csv(on_date: Optional[date_type] = Query(None, alias="date"),
                      db: Session = Depends(get_db)):
@@ -56,6 +65,7 @@ def purge_old_data(
         raise HTTPException(status_code=500, detail="Could not purge old data")
 
 
-@router.get("/stats", summary="Live engine statistics")
-def stats():
-    return live_service.get_stats()
+@router.get("/stats", response_model=LiveStatsOut, summary="Live engine statistics")
+def stats(db: Session = Depends(get_db)):
+    return live_service.get_stats(db=db)
+
