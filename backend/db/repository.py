@@ -9,17 +9,75 @@ from datetime import date as date_cls
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from db.models import Camera, Detection, Sighting, Trajectory, Violation
 from utils.config import cameras as camera_config
+from utils.plate import PLATE_SEPARATORS, canonical_plate, strip_separators
 from utils.sqlsafe import like_escape
 
 #: Ceiling on rows pulled into Python by the portable (non-SQL) aggregations
 #: below. Generous enough for a month of real traffic, but it stops a wide
 #: ``?hours=720`` window from turning into unbounded memory growth.
 MAX_ANALYTICS_ROWS = 500_000
+
+#: A vehicle re-detected at the same camera inside this window is the same pass,
+#: not a second visit. Used when synthesising journey stops from raw detections.
+STOP_GAP_MINUTES = 10
+
+#: How far a violation may sit from a sighting's timestamp and still be treated
+#: as having happened *at that stop*.
+VIOLATION_MATCH_MINUTES = 10
+
+
+# -- plate matching ---------------------------------------------------------
+def _plate_bare(column):
+    """SQL expression yielding a column's plate with separators removed.
+
+    ``REPLACE`` and ``UPPER`` exist on both SQLite and PostgreSQL, so this stays
+    portable. It cannot use the plate index, which is why the exact-match helper
+    below tries indexed equality first.
+    """
+    expr = func.upper(column)
+    for sep in PLATE_SEPARATORS:
+        expr = func.replace(expr, sep, "")
+    return expr
+
+
+def plate_matches(column, plate: str):
+    """Separator-insensitive equality filter for a stored plate column.
+
+    Plates are stored hyphenated (``MH-31-AB-1234``) but arrive from the UI in
+    whatever shape the operator typed (``mh31ab1234``, ``MH 31 AB 1234``). A
+    plain ``==`` on either form misses, which is why journey lookups silently
+    404'd. When the input is a complete plate we compare against the canonical
+    hyphenated form first so the index is usable, and fall back to a
+    ``REPLACE()`` comparison for rows stored in some other shape.
+    """
+    bare = strip_separators(plate)
+    clauses = [_plate_bare(column) == bare]
+    canonical = canonical_plate(plate)
+    if canonical:
+        clauses.insert(0, column == canonical)
+    return or_(*clauses)
+
+
+def plate_contains(column, fragment: str):
+    """Separator-insensitive ``LIKE '%fragment%'`` filter for partial plates."""
+    pattern = f"%{like_escape(strip_separators(fragment))}%"
+    return _plate_bare(column).like(pattern, escape="\\")
+
+
+def _day_bounds(date_from: Optional[date_cls], date_to: Optional[date_cls]):
+    """Convert an inclusive date range to half-open datetime bounds.
+
+    Comparing against the indexed ``timestamp`` column beats wrapping it in
+    ``date()``, which forces a scan, and makes ``date_to`` cover its whole day.
+    """
+    start = datetime.combine(date_from, datetime.min.time()) if date_from else None
+    end = datetime.combine(date_to + timedelta(days=1), datetime.min.time()) if date_to else None
+    return start, end
 
 
 def _bbox(d: dict):
@@ -71,8 +129,7 @@ def search_detections(db: Session, plate: Optional[str] = None, vehicle_type: Op
                       limit: int = 100, offset: int = 0):
     q = db.query(Detection)
     if plate:
-        pattern = f"%{like_escape(plate.upper())}%"
-        q = q.filter(Detection.plate_text.like(pattern, escape="\\"))
+        q = q.filter(plate_contains(Detection.plate_text, plate))
     if vehicle_type:
         q = q.filter(Detection.vehicle_type == vehicle_type)
     if color:
@@ -113,7 +170,7 @@ def add_trajectory(db: Session, t: dict) -> Trajectory:
 
 
 def get_journey(db: Session, plate: str, on_date: Optional[date_cls] = None) -> Optional[Trajectory]:
-    q = db.query(Trajectory).filter(Trajectory.plate_text == plate.upper())
+    q = db.query(Trajectory).filter(plate_matches(Trajectory.plate_text, plate))
     if on_date:
         q = q.filter(Trajectory.date == on_date)
     return q.order_by(Trajectory.date.desc(), Trajectory.trajectory_id.desc()).first()
@@ -127,9 +184,8 @@ def search_journeys(
     camera_id: Optional[str] = None,
     limit: int = 20,
 ) -> list:
-    """Search trajectories by partial plate (case-insensitive LIKE)."""
-    pattern = f"%{like_escape(plate_fragment.upper())}%"
-    q = db.query(Trajectory).filter(Trajectory.plate_text.like(pattern, escape="\\"))
+    """Search trajectories by partial plate, ignoring separators and case."""
+    q = db.query(Trajectory).filter(plate_contains(Trajectory.plate_text, plate_fragment))
     if date_from:
         q = q.filter(Trajectory.date >= date_from)
     if date_to:
@@ -140,6 +196,30 @@ def search_journeys(
             Sighting.camera_id == camera_id
         ).distinct()
     return q.order_by(Trajectory.date.desc(), Trajectory.trajectory_id.desc()).limit(limit).all()
+
+
+def raw_detections_for_plate(
+    db: Session,
+    plate: str,
+    date_from: Optional[date_cls] = None,
+    date_to: Optional[date_cls] = None,
+    camera_id: Optional[str] = None,
+    limit: int = 500,
+) -> List[Detection]:
+    """Every detection of a plate in ascending time order.
+
+    Shared by the journey fallback and by the speed enrichment that fills in the
+    per-stop readings ``sightings`` rows do not store.
+    """
+    q = db.query(Detection).filter(plate_matches(Detection.plate_text, plate))
+    start, end = _day_bounds(date_from, date_to)
+    if start:
+        q = q.filter(Detection.timestamp >= start)
+    if end:
+        q = q.filter(Detection.timestamp < end)
+    if camera_id:
+        q = q.filter(Detection.camera_id == camera_id)
+    return q.order_by(Detection.timestamp.asc()).limit(limit).all()
 
 
 def detections_for_plate(
@@ -153,51 +233,60 @@ def detections_for_plate(
     """Fetch raw Detection rows for a plate and synthesise a sightings list.
 
     This is the fallback when no Trajectory row has been persisted yet — the
-    caller gets a dict in the same shape as Trajectory.to_dict() so the frontend
-    can render the journey identically.
-    """
-    plate_up = plate.upper()
-    q = db.query(Detection).filter(Detection.plate_text == plate_up)
-    if date_from:
-        q = q.filter(func.date(Detection.timestamp) >= date_from)
-    if date_to:
-        q = q.filter(func.date(Detection.timestamp) <= date_to)
-    if camera_id:
-        q = q.filter(Detection.camera_id == camera_id)
+    ``TrajectoryLinker`` only writes one once it has linked two or more
+    sightings, so a plate can be well attested in ``detections`` and absent from
+    ``trajectories``. The caller gets a dict shaped like
+    :meth:`Trajectory.to_dict` (plus ``is_approximate``) so the frontend renders
+    it identically.
 
-    rows = q.order_by(Detection.timestamp.asc()).limit(limit).all()
+    Consecutive detections at the same camera are collapsed into a single stop
+    when they fall within :data:`STOP_GAP_MINUTES`, which is what separates one
+    pass under a camera from a genuine second visit.
+    """
+    rows = raw_detections_for_plate(
+        db, plate, date_from=date_from, date_to=date_to,
+        camera_id=camera_id, limit=limit,
+    )
     if not rows:
         return []
 
-    # Build camera metadata map from config
-    from utils.config import cameras as camera_config
     cfg = camera_config()
-
-    # Synthesise sightings from Detection rows
-    sightings = []
-    seen_cam_ts: set = set()
-    for d in rows:
-        key = (d.camera_id, d.timestamp.date() if d.timestamp else None,
-               d.timestamp.hour if d.timestamp else None)
-        if key in seen_cam_ts:
+    sightings: List[dict] = []
+    for det in rows:
+        cam_cfg = cfg.get(det.camera_id, {})
+        previous = sightings[-1] if sightings else None
+        same_pass = (
+            previous is not None
+            and previous["camera_id"] == det.camera_id
+            and det.timestamp is not None
+            and previous["_last_ts"] is not None
+            and (det.timestamp - previous["_last_ts"]) <= timedelta(minutes=STOP_GAP_MINUTES)
+        )
+        if same_pass:
+            # Same pass: keep the first timestamp, but remember the fastest read.
+            previous["_last_ts"] = det.timestamp
+            if det.speed_kmh and (previous["speed_kmh"] is None or det.speed_kmh > previous["speed_kmh"]):
+                previous["speed_kmh"] = round(float(det.speed_kmh), 1)
             continue
-        seen_cam_ts.add(key)
-        cam_cfg = cfg.get(d.camera_id, {})
-        lat = cam_cfg.get("latitude")
-        lng = cam_cfg.get("longitude")
+
         sightings.append({
-            "camera_id": d.camera_id,
-            "camera_name": d.camera_name or cam_cfg.get("name", d.camera_id),
-            "timestamp": d.timestamp.replace(microsecond=0).isoformat() + "Z" if d.timestamp else None,
-            "position": {"lat": lat, "lng": lng},
+            "camera_id": det.camera_id,
+            "camera_name": cam_cfg.get("name") or det.camera_id,
+            "timestamp": _iso(det.timestamp),
+            "position": {"lat": cam_cfg.get("latitude"), "lng": cam_cfg.get("longitude")},
             "direction": None,
-            "speed_kmh": round(d.speed_kmh, 1) if d.speed_kmh else None,
+            "speed_kmh": round(float(det.speed_kmh), 1) if det.speed_kmh else None,
+            "_last_ts": det.timestamp,
         })
+
+    for s in sightings:
+        s.pop("_last_ts", None)
 
     first = rows[0]
     return [{
         "trajectory_id": None,
-        "plate": plate_up,
+        # Echo the plate as *stored*, not as typed, so the UI shows MH-31-AB-1234.
+        "plate": first.plate_text,
         "date": first.timestamp.date().isoformat() if first.timestamp else None,
         "type": first.vehicle_type,
         "color": first.vehicle_color,
@@ -206,17 +295,132 @@ def detections_for_plate(
     }]
 
 
-def violations_for_plate(db: Session, plate: str, limit: int = 50) -> list:
-    """Return all violations for a plate, ordered newest first."""
-    rows = (
-        db.query(Violation)
-        .filter(Violation.plate_text == plate.upper())
-        .order_by(Violation.timestamp.desc())
-        .limit(limit)
-        .all()
-    )
+def violations_for_plate(
+    db: Session,
+    plate: str,
+    date_from: Optional[date_cls] = None,
+    date_to: Optional[date_cls] = None,
+    limit: int = 50,
+) -> list:
+    """Return a plate's violations, newest first, optionally date-scoped."""
+    q = db.query(Violation).filter(plate_matches(Violation.plate_text, plate))
+    start, end = _day_bounds(date_from, date_to)
+    if start:
+        q = q.filter(Violation.timestamp >= start)
+    if end:
+        q = q.filter(Violation.timestamp < end)
+    rows = q.order_by(Violation.timestamp.desc()).limit(limit).all()
     return [v.to_dict() for v in rows]
 
+
+
+
+
+def violations_for_plate(
+    db: Session,
+    plate: str,
+    date_from: Optional[date_cls] = None,
+    date_to: Optional[date_cls] = None,
+    limit: int = 50,
+) -> list:
+    """Return a plate's violations, newest first, optionally date-scoped."""
+    q = db.query(Violation).filter(plate_matches(Violation.plate_text, plate))
+    start, end = _day_bounds(date_from, date_to)
+    if start:
+        q = q.filter(Violation.timestamp >= start)
+    if end:
+        q = q.filter(Violation.timestamp < end)
+    rows = q.order_by(Violation.timestamp.desc()).limit(limit).all()
+    return [v.to_dict() for v in rows]
+
+
+def enrich_sightings_with_speed(db: Session, plate: str, sightings: list,
+                                 date_from: Optional[date_cls] = None,
+                                 date_to: Optional[date_cls] = None) -> list:
+    """Fill in speed_kmh for sightings by joining raw detections on camera + time.
+
+    Sighting rows have no speed column, but the UI needs it for the timeline,
+    popups, and average-speed KPI. We look up the detection nearest each
+    sighting's timestamp (within ±5 minutes) and copy its speed reading.
+    """
+    detections = raw_detections_for_plate(db, plate, date_from=date_from, date_to=date_to)
+    if not detections:
+        return sightings
+
+    # Build a map: camera_id → [(timestamp, speed), ...]
+    det_map = {}
+    for d in detections:
+        if d.timestamp and d.camera_id:
+            det_map.setdefault(d.camera_id, []).append((d.timestamp, d.speed_kmh))
+
+    enriched = []
+    for s in sightings:
+        s = dict(s)  # shallow copy so we don't mutate the input
+        cam = s.get("camera_id")
+        ts_str = s.get("timestamp")
+        if cam and ts_str and cam in det_map:
+            try:
+                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                enriched.append(s)
+                continue
+
+            best_speed = None
+            best_delta = timedelta(minutes=5)
+            for det_ts, det_speed in det_map[cam]:
+                delta = abs(det_ts - ts)
+                if delta <= best_delta and det_speed is not None:
+                    best_delta = delta
+                    best_speed = det_speed
+
+            if best_speed is not None and s.get("speed_kmh") is None:
+                s["speed_kmh"] = round(float(best_speed), 1)
+        enriched.append(s)
+
+    return enriched
+
+
+def attach_violations_to_sightings(sightings: list, violations: list) -> list:
+    """Attach violations to the sighting they occurred at (by camera + time proximity).
+
+    A violation is matched to a sighting if it shares the same camera and happened
+    within :data:`VIOLATION_MATCH_MINUTES` of the sighting timestamp. This gives
+    the UI per-stop violation markers rather than a flat list.
+    """
+    enriched = []
+    for s in sightings:
+        s = dict(s)  # shallow copy
+        cam = s.get("camera_id")
+        ts_str = s.get("timestamp")
+        if not cam or not ts_str:
+            enriched.append(s)
+            continue
+
+        try:
+            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            enriched.append(s)
+            continue
+
+        matched = []
+        for v in violations:
+            if v.get("camera_id") != cam:
+                continue
+            vts_str = v.get("timestamp")
+            if not vts_str:
+                continue
+            try:
+                vts = datetime.fromisoformat(vts_str.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                continue
+            if abs((vts - ts).total_seconds()) <= VIOLATION_MATCH_MINUTES * 60:
+                matched.append(v)
+
+        if matched:
+            s["violations"] = matched
+        enriched.append(s)
+
+    return enriched
 
 
 def add_violation(db: Session, v: dict) -> Violation:

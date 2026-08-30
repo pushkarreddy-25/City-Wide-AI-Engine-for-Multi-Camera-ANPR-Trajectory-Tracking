@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import { api } from "../services/api.js";
 import { fmtDateTime, prettyType, todayISO } from "../services/format.js";
 
@@ -103,22 +104,34 @@ function JourneyMap({ sightings = [], violations = [] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Polyline positions={coords} pathOptions={{ color: "#00e5d0", weight: 4, opacity: 0.85 }} />
+        <Polyline
+          positions={coords}
+          pathOptions={{
+            color: "#00e5d0",
+            weight: 4,
+            opacity: 0.85,
+            className: "journey-route-line"
+          }}
+        />
         {points.map((point) => {
-          const pointVios = vioMap[point.camera_id] || [];
+          const pointVios = vioMap[point.id] || [];
           const hasVio = pointVios.length > 0;
           const markerColor = hasVio ? (VIO_COLOR[pointVios[0]?.type] || "#ff3b47") : "#00e5d0";
+
+          const icon = L.divIcon({
+            className: `journey-marker${hasVio ? " journey-marker--vio" : ""}`,
+            html: `<div class="journey-marker-inner" style="background: ${markerColor}; border-color: ${hasVio ? markerColor : "#0ea5e9"}">
+                     <span class="journey-marker-number">${point.index + 1}</span>
+                   </div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          });
+
           return (
-            <CircleMarker
+            <Marker
               key={point.id}
-              center={[point.lat, point.lng]}
-              radius={hasVio ? 11 : 8}
-              pathOptions={{
-                color: hasVio ? markerColor : "#0ea5e9",
-                fillColor: markerColor,
-                fillOpacity: 0.95,
-                weight: hasVio ? 3 : 2,
-              }}
+              position={[point.lat, point.lng]}
+              icon={icon}
             >
               <Popup maxWidth={220}>
                 <div className="map-popup">
@@ -149,7 +162,7 @@ function JourneyMap({ sightings = [], violations = [] }) {
                   )}
                 </div>
               </Popup>
-            </CircleMarker>
+            </Marker>
           );
         })}
       </MapContainer>
@@ -307,6 +320,8 @@ export function Search() {
   const [dateFrom, setDateFrom]     = useState("");
   const [dateTo, setDateTo]         = useState(todayISO());
   const [cameraId, setCameraId]     = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [color, setColor]           = useState("");
   const [traj, setTraj]             = useState(null);
   const [violations, setViolations] = useState([]);
   const [isApprox, setIsApprox]     = useState(false);
@@ -322,8 +337,10 @@ export function Search() {
     try {
       const t = await api.journey(p, {
         dateFrom: dateFrom || undefined,
-        dateeTo: dateTo || undefined,
+        dateTo: dateTo || undefined,
         cameraId: cameraId || undefined,
+        vehicleType: vehicleType || undefined,
+        color: color || undefined,
       });
       setTraj(t);
       setViolations(t.violations || []);
@@ -338,7 +355,7 @@ export function Search() {
     } finally {
       setLoading(false);
     }
-  }, [plate, dateFrom, dateTo, cameraId]);
+  }, [plate, dateFrom, dateTo, cameraId, vehicleType, color]);
 
   const sightings = traj?.sightings || [];
 
@@ -386,6 +403,33 @@ export function Search() {
               {cameras.map((c) => (
                 <option key={c.id} value={c.id}>{c.name || c.id}</option>
               ))}
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Type</span>
+            <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
+              <option value="">Any type</option>
+              <option value="Car">Car</option>
+              <option value="Truck">Truck</option>
+              <option value="Bus">Bus</option>
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Auto">Auto</option>
+            </select>
+          </label>
+
+          <label className="field">
+            <span>Colour</span>
+            <select value={color} onChange={(e) => setColor(e.target.value)}>
+              <option value="">Any colour</option>
+              <option value="White">White</option>
+              <option value="Black">Black</option>
+              <option value="Silver">Silver</option>
+              <option value="Red">Red</option>
+              <option value="Blue">Blue</option>
+              <option value="Gray">Gray</option>
+              <option value="Yellow">Yellow</option>
+              <option value="Green">Green</option>
             </select>
           </label>
 

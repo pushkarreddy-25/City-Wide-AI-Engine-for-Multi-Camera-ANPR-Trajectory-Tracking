@@ -68,9 +68,13 @@ def journey_search(
     Strategy:
     1. Try exact plate match on Trajectory table (possibly date-filtered).
     2. Fall back to raw Detection rows, synthesising sightings from them.
-    3. Enrich the result with the plate's violation history.
+    3. Enrich sightings with speed readings from detections.
+    4. Attach violations to each sighting by camera + time proximity.
+    5. Also include a top-level violations list scoped to the journey window.
+
     Returns a dict compatible with the TrajectoryOut schema plus extra keys
-    ``is_approximate`` and ``violations``.
+    ``is_approximate``, ``violations`` (top-level list), and per-sighting
+    ``violations`` arrays when a violation occurred at that stop.
     """
     plate_norm = normalise_plate(plate)
 
@@ -88,6 +92,9 @@ def journey_search(
     if traj is not None:
         result = traj.to_dict()
         result["is_approximate"] = False
+        # Use the trajectory's own date to scope violations to the trip window
+        date_from = traj.date
+        date_to = traj.date
     else:
         # 2 — Detection fallback
         approx = repository.detections_for_plate(
@@ -99,8 +106,24 @@ def journey_search(
             return None
         result = approx[0]
 
-    # 3 — Enrich with violation history
-    result["violations"] = repository.violations_for_plate(db, plate_norm)
+    # 3 — Enrich sightings with speed
+    sightings = result.get("sightings", [])
+    sightings = repository.enrich_sightings_with_speed(
+        db, plate_norm, sightings,
+        date_from=date_from, date_to=date_to,
+    )
+
+    # 4 — Fetch violations scoped to the journey window
+    violations = repository.violations_for_plate(
+        db, plate_norm,
+        date_from=date_from, date_to=date_to,
+    )
+
+    # 5 — Attach violations to their stops
+    sightings = repository.attach_violations_to_sightings(sightings, violations)
+
+    result["sightings"] = sightings
+    result["violations"] = violations
     return result
 
 

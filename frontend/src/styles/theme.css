@@ -1599,6 +1599,54 @@ input[type="date"] { font-family: var(--mono); }
   border-bottom-color: rgba(15, 23, 42, 0.12) !important;
 }
 
+/* Numbered journey markers */
+.journey-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.journey-marker-inner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.journey-marker:hover .journey-marker-inner {
+  transform: scale(1.15);
+}
+
+.journey-marker-number {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d1822;
+}
+
+.journey-marker--vio .journey-marker-inner {
+  border-width: 3px;
+  animation: pulse-vio 2s ease-in-out infinite;
+}
+
+@keyframes pulse-vio {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.9; }
+}
+
+/* Animated route line */
+.journey-route-line {
+  animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: -1000; }
+}
+
 .sightings { padding: 8px; overflow-y: auto; max-height: 520px; display: flex; flex-direction: column; gap: 4px; counter-reset: hop; }
 /* A journey is genuinely ordered, so the sightings are genuinely numbered. */
 .sighting {

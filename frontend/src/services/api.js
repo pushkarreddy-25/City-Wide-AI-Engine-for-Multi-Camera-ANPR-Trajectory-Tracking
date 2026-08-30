@@ -83,9 +83,10 @@ export const api = {
   cameras: () => req("/api/cameras"),
   liveVehicles: (limit = 60) => req(`/api/vehicles/live${qs({ limit })}`),
   search: (params) => req(`/api/vehicles/search${qs(params)}`),
-  journey: (plate, { date, dateFrom, dateeTo, cameraId } = {}) =>
+  journey: (plate, { date, dateFrom, dateTo, cameraId, vehicleType, color } = {}) =>
     req(`/api/vehicles/${encodeURIComponent(plate)}/journey${qs({
-      date, date_from: dateFrom, date_to: dateeTo, camera_id: cameraId,
+      date, date_from: dateFrom, date_to: dateTo, camera_id: cameraId,
+      type: vehicleType, color,
     })}`),
   searchJourneys: (plate, { dateFrom, dateTo, cameraId, limit } = {}) =>
     req(`/api/vehicles/search-journeys${qs({
