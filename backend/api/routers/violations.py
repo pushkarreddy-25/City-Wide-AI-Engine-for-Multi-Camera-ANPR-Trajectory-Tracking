@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/violations", tags=["violations"])
 #: Closed sets, so a typo returns 422 instead of silently matching nothing —
 #: and so no unvalidated string reaches the query layer or the dashboard's
 #: CSS class names.
-ViolationType = Literal["red_light", "over_speed", "wrong_lane"]
+ViolationType = Literal["red_light", "over_speed", "wrong_lane", "parking_violation"]
 Severity = Literal["low", "medium", "high"]
 
 #: Deep pagination on SQLite means walking and discarding every preceding row,

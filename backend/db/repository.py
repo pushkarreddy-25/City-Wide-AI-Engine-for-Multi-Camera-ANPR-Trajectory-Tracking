@@ -121,12 +121,49 @@ def get_journey(db: Session, plate: str, on_date: Optional[date_cls] = None) -> 
 
 # -- violations -------------------------------------------------------------
 def add_violation(db: Session, v: dict) -> Violation:
+    violation_type = v.get("violation_type") or v.get("type")
+    plate_text = (v.get("plate_text") or v.get("plate") or "").upper()
+    camera_id = v.get("camera_id")
+    timestamp = v.get("timestamp")
+
+    if violation_type and plate_text and camera_id and timestamp:
+        db.flush()
+        window_start = timestamp - timedelta(minutes=5)
+        window_end = timestamp + timedelta(minutes=5)
+        existing = (
+            db.query(Violation)
+            .filter(
+                and_(
+                    Violation.violation_type == violation_type,
+                    Violation.plate_text == plate_text,
+                    Violation.camera_id == camera_id,
+                    Violation.timestamp >= window_start,
+                    Violation.timestamp <= window_end,
+                )
+            )
+            .order_by(Violation.confidence.desc().nullslast(), Violation.timestamp.desc())
+            .first()
+        )
+        if existing is not None:
+            new_confidence = float(v.get("confidence") or 0.0)
+            existing_confidence = float(existing.confidence or 0.0)
+            if new_confidence > existing_confidence:
+                existing.camera_name = v.get("camera_name") or existing.camera_name
+                existing.timestamp = timestamp
+                existing.severity = v.get("severity") or existing.severity
+                existing.confidence = new_confidence
+                existing.speed_kmh = v.get("speed_kmh") if v.get("speed_kmh") is not None else existing.speed_kmh
+                existing.posted_limit = v.get("posted_limit") if v.get("posted_limit") is not None else existing.posted_limit
+                existing.image_path = v.get("image_path") or existing.image_path
+                existing.notes = v.get("notes") or existing.notes
+            return existing
+
     vio = Violation(
-        violation_type=v.get("violation_type") or v.get("type"),
-        plate_text=v.get("plate_text") or v.get("plate"),
-        camera_id=v.get("camera_id"),
+        violation_type=violation_type,
+        plate_text=plate_text,
+        camera_id=camera_id,
         camera_name=v.get("camera_name"),
-        timestamp=v.get("timestamp"),
+        timestamp=timestamp,
         severity=v.get("severity"),
         confidence=v.get("confidence"),
         speed_kmh=v.get("speed_kmh"),
@@ -200,19 +237,42 @@ def daily_volume(db: Session, on_date: date_cls) -> dict:
 
 
 def violations_summary(db: Session, start: datetime, end: datetime) -> dict:
-    rows = (db.query(Violation.violation_type, Violation.severity,
-                     Violation.camera_id, Violation.camera_name)
+    rows = (db.query(Violation)
             .filter(and_(Violation.timestamp >= start, Violation.timestamp <= end))
             .limit(MAX_ANALYTICS_ROWS).all())
 
     by_type: dict = {}
     by_severity: dict = {}
     by_camera: dict = {}
-    for vtype, severity, cam_id, cam_name in rows:
+    repeat_by_plate: dict = {}
+    for row in rows:
+        vtype = row.violation_type
+        severity = row.severity or "unknown"
+        cam_id = row.camera_id
+        cam_name = row.camera_name
         by_type[vtype] = by_type.get(vtype, 0) + 1
         by_severity[severity] = by_severity.get(severity, 0) + 1
         key = (cam_id, cam_name)
         by_camera[key] = by_camera.get(key, 0) + 1
+
+        plate = (row.plate_text or "").upper()
+        if not plate:
+            continue
+        entry = repeat_by_plate.setdefault(plate, {"plate": plate, "violation_count": 0, "dates": set()})
+        entry["violation_count"] += 1
+        entry["dates"].add(row.timestamp.date().isoformat())
+
+    top_repeat = [
+        {
+            "plate": entry["plate"],
+            "violation_count": entry["violation_count"],
+            "dates": sorted(entry["dates"]),
+        }
+        for entry in sorted(
+            repeat_by_plate.values(),
+            key=lambda item: (-item["violation_count"], item["plate"]),
+        )[:10]
+    ]
 
     return {
         "start": start.isoformat() + "Z",
@@ -224,6 +284,36 @@ def violations_summary(db: Session, start: datetime, end: datetime) -> dict:
             {"camera_id": cid, "camera_name": name, "count": cnt}
             for (cid, name), cnt in sorted(by_camera.items(), key=lambda kv: kv[1], reverse=True)
         ],
+        "top_10_repeat_offenders": top_repeat,
+    }
+
+
+def purge_old_data(db: Session, now: Optional[datetime] = None) -> dict:
+    now = now or datetime.utcnow()
+    detection_cutoff = now - timedelta(days=7)
+    trajectory_cutoff = now.date() - timedelta(days=30)
+    violation_cutoff = now - timedelta(days=90)
+
+    detections_deleted = (
+        db.query(Detection)
+        .filter(Detection.timestamp < detection_cutoff)
+        .delete(synchronize_session=False)
+    )
+    trajectories_deleted = (
+        db.query(Trajectory)
+        .filter(Trajectory.date < trajectory_cutoff)
+        .delete(synchronize_session=False)
+    )
+    violations_deleted = (
+        db.query(Violation)
+        .filter(Violation.timestamp < violation_cutoff)
+        .delete(synchronize_session=False)
+    )
+    return {
+        "detections_deleted": detections_deleted,
+        "trajectories_deleted": trajectories_deleted,
+        "violations_deleted": violations_deleted,
+        "cutoff": now.isoformat() + "Z",
     }
 
 

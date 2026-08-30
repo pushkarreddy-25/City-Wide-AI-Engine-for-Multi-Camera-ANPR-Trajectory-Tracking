@@ -1,8 +1,9 @@
 """Rule-based violation-detection tests (violations.detector)."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from db import repository
 from violations.detector import (
-    OVER_SPEED, RED_LIGHT, WRONG_LANE, ViolationDetector,
+    OVER_SPEED, PARKING_VIOLATION, RED_LIGHT, WRONG_LANE, ViolationDetector,
 )
 
 T0 = datetime(2026, 1, 1, 12, 0, 0)
@@ -95,3 +96,100 @@ def test_evidence_path_is_populated(sample_cameras):
     det = ViolationDetector(sample_cameras)
     out = det.evaluate(_det(speed=80))
     assert out[0]["image_path"].startswith("evidence/cam_1/")
+
+
+def test_parking_violation_when_stationary_in_no_parking_zone(sample_cameras):
+    det = ViolationDetector(sample_cameras)
+    out = det.evaluate(_det(), {"no_parking_zone": True, "stationary_seconds": 600})
+    assert PARKING_VIOLATION in _types(out)
+
+
+def test_violations_summary_includes_repeat_offenders(db_session):
+    now = datetime(2026, 1, 2, 9, 0, 0)
+    repo = repository
+    repo.add_violation(db_session, {
+        "violation_type": "red_light",
+        "plate_text": "MH-31-AB-1234",
+        "camera_id": "cam_1",
+        "camera_name": "Sitabuldi",
+        "timestamp": now,
+        "severity": "high",
+        "confidence": 0.9,
+    })
+    repo.add_violation(db_session, {
+        "violation_type": "red_light",
+        "plate_text": "MH-31-AB-1234",
+        "camera_id": "cam_1",
+        "camera_name": "Sitabuldi",
+        "timestamp": now + timedelta(minutes=20),
+        "severity": "high",
+        "confidence": 0.8,
+    })
+    db_session.commit()
+
+    summary = repo.violations_summary(db_session, now - timedelta(hours=1), now + timedelta(hours=1))
+    assert summary["top_10_repeat_offenders"][0]["plate"] == "MH-31-AB-1234"
+    assert summary["top_10_repeat_offenders"][0]["violation_count"] == 2
+
+
+def test_duplicate_violation_is_merged(db_session):
+    repo = repository
+    ts = datetime(2026, 1, 3, 10, 0, 0)
+    repo.add_violation(db_session, {
+        "violation_type": "over_speed",
+        "plate_text": "MH-31-AB-1234",
+        "camera_id": "cam_1",
+        "camera_name": "Sitabuldi",
+        "timestamp": ts,
+        "severity": "medium",
+        "confidence": 0.7,
+    })
+    repo.add_violation(db_session, {
+        "violation_type": "over_speed",
+        "plate_text": "MH-31-AB-1234",
+        "camera_id": "cam_1",
+        "camera_name": "Sitabuldi",
+        "timestamp": ts + timedelta(minutes=3),
+        "severity": "high",
+        "confidence": 0.9,
+    })
+    db_session.commit()
+
+    rows, total = repo.list_violations(db_session)
+    assert total == 1
+    assert rows[0].confidence == 0.9
+
+
+def test_purge_old_data_removes_expired_rows(db_session):
+    repo = repository
+    old = datetime.utcnow() - timedelta(days=100)
+    today = datetime.utcnow()
+    repo.add_violation(db_session, {
+        "violation_type": "red_light",
+        "plate_text": "MH-31-AB-1234",
+        "camera_id": "cam_1",
+        "camera_name": "Sitabuldi",
+        "timestamp": old,
+        "severity": "low",
+        "confidence": 0.6,
+    })
+    db_session.add(
+        repository.Detection(
+            camera_id="cam_1",
+            timestamp=old,
+            plate_text="MH-31-AB-1234",
+        )
+    )
+    db_session.add(
+        repository.Trajectory(
+            plate_text="MH-31-AB-1234",
+            date=(today.date() - timedelta(days=90)),
+            vehicle_type="car",
+        )
+    )
+    db_session.commit()
+
+    result = repo.purge_old_data(db_session, now=today)
+    assert result["violations_deleted"] >= 1
+    assert result["detections_deleted"] >= 1
+    assert result["trajectories_deleted"] >= 1

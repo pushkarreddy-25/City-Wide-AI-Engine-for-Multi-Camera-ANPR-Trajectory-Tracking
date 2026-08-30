@@ -21,7 +21,8 @@ from utils.config import cameras as camera_config
 RED_LIGHT = "red_light"
 OVER_SPEED = "over_speed"
 WRONG_LANE = "wrong_lane"
-VIOLATION_TYPES = (RED_LIGHT, OVER_SPEED, WRONG_LANE)
+PARKING_VIOLATION = "parking_violation"
+VIOLATION_TYPES = (RED_LIGHT, OVER_SPEED, WRONG_LANE, PARKING_VIOLATION)
 
 
 class ViolationDetector:
@@ -53,6 +54,14 @@ class ViolationDetector:
             where = f" (lane {lane})" if lane else ""
             out.append(self._make(WRONG_LANE, det, cam, severity="medium",
                                    notes=f"Improper lane usage{where}"))
+
+        stationary = context.get("stationary_seconds")
+        if context.get("no_parking_zone") and stationary is not None:
+            threshold = 300
+            if stationary >= threshold:
+                severity = "high" if stationary >= 600 else "medium"
+                out.append(self._make(PARKING_VIOLATION, det, cam, severity=severity,
+                                       notes=f"Vehicle stationary for {stationary} seconds in no-parking zone"))
         return out
 
     # -- rule helpers -------------------------------------------------------
