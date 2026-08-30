@@ -50,7 +50,15 @@ export function LiveMap({ cameras = [], vehicles = [] }) {
   const center = [points[0].lat, points[0].lng];
 
   return (
-    <MapContainer center={center} zoom={12} scrollWheelZoom className="live-map" style={{ height: "320px", maxHeight: "320px", border: "2px solid #333", borderRadius: "8px" }} minZoom={8} maxZoom={18}>
+    <MapContainer
+      center={center}
+      zoom={12}
+      scrollWheelZoom
+      className="live-map"
+      style={{ height: "100%", width: "100%", minHeight: "480px" }}
+      minZoom={8}
+      maxZoom={18}
+    >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

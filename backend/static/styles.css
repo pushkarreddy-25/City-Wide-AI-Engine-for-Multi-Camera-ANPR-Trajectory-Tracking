@@ -459,7 +459,8 @@ body::before {
   min-height: 460px;
 }
 .panel-map {
-  min-height: 440px;
+  min-height: 520px;
+  height: 100%;
   overflow: hidden;
 }
 .panel-feed { min-height: 0; }
@@ -467,7 +468,7 @@ body::before {
 .map {
   width: 100%;
   height: 100%;
-  min-height: 360px;
+  min-height: 480px;
   background: #edf3f7;
   border-top: 1px solid var(--rule);
 }
@@ -475,7 +476,7 @@ body::before {
 .map .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: 360px;
+  min-height: 480px;
   background: #edf3f7;
 }
 
@@ -925,10 +926,10 @@ input[type="date"] { font-family: var(--mono); }
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: var(--gap);
-  min-height: 460px;
+  min-height: 540px;
 }
-.panel-journey-map { display: flex; flex-direction: column; }
-.journey-map { flex: 1; min-height: 380px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--rule); }
+.panel-journey-map { display: flex; flex-direction: column; min-height: 520px; height: 100%; }
+.journey-map { flex: 1; min-height: 500px; height: 100%; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--rule); }
 
 .search-result { display: flex; flex-direction: column; gap: var(--gap); }
 .search-msg {

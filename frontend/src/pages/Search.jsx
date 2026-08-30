@@ -35,7 +35,15 @@ function JourneyMap({ sightings = [] }) {
 
   return (
     <div className="journey-map">
-      <MapContainer bounds={coords.length > 1 ? coords : [[points[0].lat, points[0].lng]]} scrollWheelZoom className="journey-map-inner" zoom={13} minZoom={7} maxZoom={18}>
+      <MapContainer
+        bounds={coords.length > 1 ? coords : [[points[0].lat, points[0].lng]]}
+        scrollWheelZoom
+        className="journey-map-inner"
+        style={{ height: "100%", width: "100%", minHeight: "500px" }}
+        zoom={13}
+        minZoom={7}
+        maxZoom={18}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -127,7 +135,7 @@ export function Search() {
 
       {traj && (
         <div className="journey-grid">
-          <section className="panel">
+          <section className="panel panel-journey-map">
             <div className="panel-head">
               <h2 className="eyebrow">Journey map</h2>
               <span className="mono dim">{traj.plate}</span>

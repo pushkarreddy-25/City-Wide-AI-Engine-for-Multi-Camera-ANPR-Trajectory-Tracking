@@ -488,25 +488,36 @@ body::before {
 /* ------------------------------------------------------ dashboard layout --- */
 .dash-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 372px;
+  grid-template-columns: minmax(0, 1fr) 390px;
   gap: var(--gap);
   flex: 1;
-  min-height: 460px;
+  min-height: 540px;
 }
 .panel-map {
   display: flex;
   flex-direction: column;
-  min-height: 360px;
-  height: clamp(360px, 48vh, 520px);
+  min-height: 520px;
+  height: 100%;
   overflow: hidden;
 }
-.panel-feed { min-height: 0; }
+.panel-feed {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  height: 100%;
+}
+.panel-feed .feed {
+  flex: 1;
+  max-height: calc(100vh - 280px);
+  min-height: 460px;
+  overflow-y: auto;
+}
 
 .live-map {
   position: relative;
   flex: 1;
   width: 100%;
-  min-height: 0;
+  min-height: 480px;
   height: 100%;
   background: #edf3f7;
   border-top: 1px solid var(--rule);
@@ -515,7 +526,7 @@ body::before {
 .live-map .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: 0;
+  min-height: 480px;
   background: #edf3f7;
   font: inherit;
 }
@@ -968,9 +979,17 @@ input[type="date"] { font-family: var(--mono); }
 /* ---------------------------------------------------------------- search --- */
 .journey-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
   gap: var(--gap);
-  min-height: 460px;
+  min-height: 540px;
+  flex: 1;
+}
+.panel-journey-map {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  height: 100%;
+  overflow: hidden;
 }
 .search-result { display: flex; flex-direction: column; gap: var(--gap); }
 .alert-banner {
@@ -1376,8 +1395,9 @@ input[type="date"] { font-family: var(--mono); }
 .journey-map {
   position: relative;
   flex: 1;
-  min-height: 380px;
+  min-height: 500px;
   height: 100%;
+  width: 100%;
   background: #edf3f7;
   border-top: 1px solid var(--rule);
 }
@@ -1385,14 +1405,14 @@ input[type="date"] { font-family: var(--mono); }
 .journey-map-inner {
   width: 100%;
   height: 100%;
-  min-height: 380px;
+  min-height: 500px;
   background: #edf3f7;
 }
 
 .journey-map .leaflet-container {
   width: 100%;
   height: 100%;
-  min-height: 380px;
+  min-height: 500px;
   background: #edf3f7;
   font: inherit;
 }
@@ -1408,7 +1428,7 @@ input[type="date"] { font-family: var(--mono); }
   border-bottom-color: rgba(15, 23, 42, 0.12) !important;
 }
 
-.sightings { padding: 8px; overflow-y: auto; max-height: 460px; display: flex; flex-direction: column; gap: 4px; counter-reset: hop; }
+.sightings { padding: 8px; overflow-y: auto; max-height: 520px; display: flex; flex-direction: column; gap: 4px; counter-reset: hop; }
 /* A journey is genuinely ordered, so the sightings are genuinely numbered. */
 .sighting {
   counter-increment: hop;
