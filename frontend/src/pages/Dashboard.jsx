@@ -25,9 +25,16 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
   const open = useMemo(() => feed.filter((v) => !v.resolved), [feed]);
   const highCount = open.filter((v) => v.severity === "high").length;
   const vehiclesInView = stats.active_vehicles ?? vehicles.length;
+  const lowConfidenceCount = open.filter((v) => typeof v.confidence === "number" && v.confidence < 0.65).length;
+  const lowConfidenceAlert = open.length > 0 && (lowConfidenceCount / open.length) > 0.4;
 
   return (
     <section className="view view-dashboard">
+      {lowConfidenceAlert && (
+        <div className="alert-banner" role="alert">
+          Low-light or poor-condition plate reads detected: {Math.round((lowConfidenceCount / open.length) * 100)}% of active plates are below 0.65 confidence.
+        </div>
+      )}
       <div className="stat-strip">
         <StatCard id="stat-vehicles" eyebrow="In view now" value={vehiclesInView}>
           vehicles across {cameras.length || 5} cameras

@@ -110,6 +110,7 @@ function ViolationTab() {
     labels: types.map(prettyType),
     datasets: [{ data: types.map((t) => data.by_type[t]), backgroundColor: types.map((t) => TYPE_COLOR[t] || ACCENT), borderColor: DECK, borderWidth: 3 }],
   };
+  const repeatOffenders = data?.top_10_repeat_offenders || [];
 
   return (
     <div className="tab-panel">
@@ -141,6 +142,25 @@ function ViolationTab() {
           <CameraTable rows={data?.by_camera} />
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-head"><h2 className="eyebrow">Top 10 repeat offenders</h2></div>
+        <div className="table-wrap">
+          <table className="tbl">
+            <thead><tr><th>Plate</th><th className="ta-r">Violations</th><th>Dates</th></tr></thead>
+            <tbody>
+              {repeatOffenders.length === 0 && <tr><td colSpan={3} className="tbl-empty">No repeat offenders in this window.</td></tr>}
+              {repeatOffenders.map((row) => (
+                <tr key={row.plate}>
+                  <td className="mono">{row.plate}</td>
+                  <td className="ta-r mono">{row.violation_count}</td>
+                  <td>{(row.dates || []).slice(0, 5).join(", ") || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

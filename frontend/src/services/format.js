@@ -5,6 +5,7 @@ export const TYPE_LABEL = {
   over_speed: "Over speed",
   speeding: "Over speed",
   wrong_lane: "Wrong lane",
+  parking_violation: "Parking violation",
 };
 
 export const TYPE_COLOR = {
@@ -12,6 +13,7 @@ export const TYPE_COLOR = {
   over_speed: "#ffb020",
   speeding: "#ffb020",
   wrong_lane: "#00e5d0",
+  parking_violation: "#8d6bff",
 };
 
 /**
@@ -60,6 +62,7 @@ export function detailLine(v) {
     return `${v.speed_kmh ?? "?"} km/h in a ${v.posted_limit ?? "?"} km/h zone`;
   if (v.type === "red_light") return "Crossed stop line on red signal";
   if (v.type === "wrong_lane") return "Vehicle in restricted lane";
+  if (v.type === "parking_violation") return "Vehicle stationary in no-parking zone";
   return "";
 }
 

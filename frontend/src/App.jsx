@@ -10,6 +10,7 @@ import { Dashboard } from "./pages/Dashboard.jsx";
 import { Violations } from "./pages/Violations.jsx";
 import { Search } from "./pages/Search.jsx";
 import { Reports } from "./pages/Reports.jsx";
+import { Settings } from "./pages/Settings.jsx";
 
 export function App() {
   const { push } = useToast();
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/violations" element={<Violations openModal={openModal} />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
 

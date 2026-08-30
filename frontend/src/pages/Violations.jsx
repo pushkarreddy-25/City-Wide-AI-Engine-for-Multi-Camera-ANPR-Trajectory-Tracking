@@ -46,6 +46,7 @@ export function Violations({ openModal }) {
             <option value="red_light">Red light</option>
             <option value="over_speed">Over speed</option>
             <option value="wrong_lane">Wrong lane</option>
+            <option value="parking_violation">Parking violation</option>
           </select>
         </label>
         <label className="field">
