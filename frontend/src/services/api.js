@@ -99,6 +99,8 @@ export const api = {
   speedSummary: (windowMinutes = 15) => req(`/api/reports/speed-summary${qs({ window_minutes: windowMinutes })}`),
   purgeOldData: () => req("/api/admin/purge-old-data", { method: "POST", headers: writeHeaders() }),
   stats: () => req("/api/stats"),
+  health: () => req("/health"),
+  diagnostics: () => req("/api/system/diagnostics"),
 };
 
 // Export links (opened directly by the browser, so they need the full URL)

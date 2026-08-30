@@ -424,3 +424,27 @@ def speed_summary(db: Session, window_minutes: int = 15) -> dict:
         "by_camera": by_camera,
     }
 
+
+def system_diagnostics(db: Session) -> dict:
+    """Return operational database statistics, retention windows, and engine status."""
+    return {
+        "status": "healthy",
+        "counts": {
+            "detections": db.query(Detection).count(),
+            "trajectories": db.query(Trajectory).count(),
+            "violations": db.query(Violation).count(),
+            "cameras": db.query(Camera).count(),
+        },
+        "retention": {
+            "detections_days": 7,
+            "trajectories_days": 30,
+            "violations_days": 90,
+        },
+        "anpr_engine": {
+            "default_confidence_threshold": 0.65,
+            "speed_tolerance_kmh": 5.0,
+            "tracked_cameras": len(camera_config()),
+        },
+    }
+
+

@@ -69,3 +69,9 @@ def purge_old_data(
 def stats(db: Session = Depends(get_db)):
     return live_service.get_stats(db=db)
 
+
+@router.get("/system/diagnostics", summary="System database counts and engine diagnostics")
+def system_diagnostics(db: Session = Depends(get_db)):
+    return report_service.system_diagnostics(db)
+
+

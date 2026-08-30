@@ -44,3 +44,8 @@ def average_city_speed(db, window_minutes: int = 15) -> Optional[float]:
 def speed_summary(db, window_minutes: int = 15) -> dict:
     return repository.speed_summary(db, window_minutes=window_minutes)
 
+
+def system_diagnostics(db) -> dict:
+    return repository.system_diagnostics(db)
+
+

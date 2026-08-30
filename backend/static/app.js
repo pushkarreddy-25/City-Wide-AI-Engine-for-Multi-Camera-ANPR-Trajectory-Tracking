@@ -127,6 +127,7 @@
     document.body.dataset.view = name;
     if (name === "violations") loadViolations();
     if (name === "reports") loadActiveReport();
+    if (name === "settings") loadSettingsDiagnostics();
   }
 
   /* ========================================================================
@@ -771,6 +772,50 @@
   }
 
   /* ========================================================================
+     Settings & Diagnostics
+     ==================================================================== */
+  async function loadSettingsDiagnostics() {
+    try {
+      const diag = await api("/api/system/diagnostics");
+      if (diag && diag.counts) {
+        $("#diag-cnt-detections").textContent = (diag.counts.detections ?? 0).toLocaleString();
+        $("#diag-cnt-trajectories").textContent = (diag.counts.trajectories ?? 0).toLocaleString();
+        $("#diag-cnt-violations").textContent = (diag.counts.violations ?? 0).toLocaleString();
+        $("#diag-cnt-cameras").textContent = String(diag.counts.cameras ?? state.cameras.length);
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  function initSettings() {
+    const refBtn = $("#diag-refresh-btn");
+    if (refBtn) refBtn.addEventListener("click", loadSettingsDiagnostics);
+
+    const purgeBtn = $("#diag-purge-btn");
+    const msgEl = $("#diag-msg");
+    if (purgeBtn) {
+      purgeBtn.addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to purge expired traffic data?")) return;
+        purgeBtn.disabled = true;
+        purgeBtn.textContent = "Purging…";
+        if (msgEl) msgEl.hidden = true;
+        try {
+          const res = await api("/api/admin/purge-old-data", { method: "POST", headers: writeHeaders() });
+          if (msgEl) {
+            msgEl.hidden = false;
+            msgEl.textContent = `Purged ${res.detections_deleted ?? 0} detections, ${res.trajectories_deleted ?? 0} trajectories, ${res.violations_deleted ?? 0} violations.`;
+          }
+          await loadSettingsDiagnostics();
+        } catch (e) {
+          alert(`Failed to purge old data: ${e.message}`);
+        } finally {
+          purgeBtn.disabled = false;
+          purgeBtn.textContent = "Purge Expired Records";
+        }
+      });
+    }
+  }
+
+  /* ========================================================================
      Boot
      ==================================================================== */
   async function warmStart() {
@@ -793,7 +838,7 @@
   }
 
   async function boot() {
-    initNav(); initViolations(); initSearch(); initReports();
+    initNav(); initViolations(); initSearch(); initReports(); initSettings();
 
     // Chart.js library is loaded from CDN in index.html
     const hasChart = typeof Chart !== "undefined";

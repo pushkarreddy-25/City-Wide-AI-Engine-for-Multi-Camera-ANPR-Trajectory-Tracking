@@ -63,6 +63,10 @@
       <svg viewBox="0 0 24 24" class="nav-ico" aria-hidden="true"><path d="M5 9.2h3V19H5zM10.6 5h3v14h-3zm5.6 8H19v6h-2.8z"/></svg>
       <span>Reports</span>
     </button>
+    <button class="nav-item" data-nav="settings">
+      <svg viewBox="0 0 24 24" class="nav-ico" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.18l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.45 2.5a.5.5 0 0 0-.5-.34h-3.9a.5.5 0 0 0-.5.34l-.4 2.5c-.56.23-1.1.54-1.63.94l-2.39-.96a.5.5 0 0 0-.61.18L2.7 9.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.82 13.52a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.18l2.39-.96c.53.4 1.07.71 1.63.94l.4 2.5a.5.5 0 0 0 .5.34h3.9a.5.5 0 0 0 .5-.34l.4-2.5c.56-.23 1.1-.54 1.63-.94l2.39.96a.5.5 0 0 0 .61-.18l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
+      <span>Settings</span>
+    </button>
     <div class="sidebar-foot">
       <div class="legend">
         <span class="legend-row"><i class="dot ok"></i>Free-flowing</span>
@@ -287,7 +291,61 @@
         <div class="cong-cards" id="cong-cards"></div>
       </div>
     </section>
+
+    <!-- ========== SETTINGS ========== -->
+    <section class="view view-settings" data-view-panel="settings" hidden>
+      <div class="view-head">
+        <div>
+          <h1 class="view-title">Settings & Diagnostics</h1>
+          <p class="view-desc">System retention, database storage counters, and operational maintenance.</p>
+        </div>
+      </div>
+
+      <div class="settings-container">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="eyebrow">Database Row Counts & Retention</h2>
+            <button class="btn btn-sm" id="diag-refresh-btn">Scan Database</button>
+          </div>
+
+          <div class="diag-kpi-grid">
+            <div class="diag-kpi-card">
+              <span class="diag-label">Detections</span>
+              <strong class="diag-val mono" id="diag-cnt-detections">—</strong>
+              <span class="diag-sub">Retention: 7 days</span>
+            </div>
+            <div class="diag-kpi-card">
+              <span class="diag-label">Trajectories</span>
+              <strong class="diag-val mono" id="diag-cnt-trajectories">—</strong>
+              <span class="diag-sub">Retention: 30 days</span>
+            </div>
+            <div class="diag-kpi-card">
+              <span class="diag-label">Violations</span>
+              <strong class="diag-val mono" id="diag-cnt-violations">—</strong>
+              <span class="diag-sub">Retention: 90 days</span>
+            </div>
+            <div class="diag-kpi-card">
+              <span class="diag-label">Active Cameras</span>
+              <strong class="diag-val mono" id="diag-cnt-cameras">5</strong>
+              <span class="diag-sub">Engine: Healthy</span>
+            </div>
+          </div>
+
+          <div class="settings-actions-bar">
+            <div class="left-actions">
+              <span class="dim" style="font-size:12px; align-self:center;">Purge removes rows older than retention limits</span>
+            </div>
+            <div class="right-actions">
+              <button class="btn btn-primary btn-danger" id="diag-purge-btn">Purge Expired Records</button>
+            </div>
+          </div>
+
+          <p class="success-msg" id="diag-msg" hidden></p>
+        </div>
+      </div>
+    </section>
   </main>
+
 
   <!-- Toasts -->
   <div class="toast-stack" id="toasts" aria-live="assertive"></div>

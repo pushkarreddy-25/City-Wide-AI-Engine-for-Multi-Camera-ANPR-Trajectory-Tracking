@@ -52,6 +52,18 @@ def test_speed_summary_endpoint(client):
     assert {"camera_id", "camera_name", "avg_speed_kmh", "sample_count", "posted_limit"} <= set(first)
 
 
+def test_system_diagnostics_endpoint(client):
+    r = client.get("/api/system/diagnostics")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "healthy"
+    assert "counts" in body
+    assert "detections" in body["counts"]
+    assert "retention" in body
+    assert "anpr_engine" in body
+
+
+
 
 def test_violation_alerts_shape(client):
     r = client.get("/api/violations/alerts")
