@@ -114,7 +114,7 @@ function JourneyMap({ sightings = [], violations = [] }) {
           }}
         />
         {points.map((point) => {
-          const pointVios = vioMap[point.id] || [];
+          const pointVios = vioMap[point.camera_id] || [];
           const hasVio = pointVios.length > 0;
           const markerColor = hasVio ? (VIO_COLOR[pointVios[0]?.type] || "#ff3b47") : "#00e5d0";
 

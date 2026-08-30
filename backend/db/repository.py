@@ -12,7 +12,7 @@ from typing import List, Optional
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from db.models import Camera, Detection, Sighting, Trajectory, Violation
+from db.models import Camera, Detection, Sighting, Trajectory, Violation, _iso
 from utils.config import cameras as camera_config
 from utils.plate import PLATE_SEPARATORS, canonical_plate, strip_separators
 from utils.sqlsafe import like_escape
