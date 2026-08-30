@@ -32,10 +32,13 @@ class CameraViolationCount(BaseModel):
     count: int = 0
 
 
-class RepeatOffenderOut(BaseModel):
+class RepeatOffender(BaseModel):
     plate: Optional[str] = None
     violation_count: int = 0
     dates: List[str] = []
+
+
+RepeatOffenderOut = RepeatOffender
 
 
 class ViolationsSummaryOut(BaseModel):
@@ -45,4 +48,4 @@ class ViolationsSummaryOut(BaseModel):
     by_type: Dict[str, int] = {}
     by_severity: Dict[str, int] = {}
     by_camera: List[CameraViolationCount] = []
-    top_10_repeat_offenders: List[RepeatOffenderOut] = []
+    top_10_repeat_offenders: List[RepeatOffender] = []

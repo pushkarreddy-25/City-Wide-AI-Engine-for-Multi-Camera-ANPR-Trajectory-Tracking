@@ -1,10 +1,13 @@
 from datetime import date as date_type
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from api.schemas import CongestionCell, DailyVolumeOut, ViolationsSummaryOut
+from api.security import require_write_access
+from db import repository
 from db.database import get_db
 from services import export_service, live_service, report_service
 
@@ -37,6 +40,20 @@ def daily_volume_csv(on_date: Optional[date_type] = Query(None, alias="date"),
     data = export_service.daily_volume_csv(db, on_date)
     return Response(content=data, media_type="text/csv",
                     headers={"Content-Disposition": "attachment; filename=daily_volume.csv"})
+
+
+@router.post("/admin/purge-old-data", summary="Purge expired detection, trajectory, and violation records")
+def purge_old_data(
+    db: Session = Depends(get_db),
+    _: None = Depends(require_write_access),
+):
+    try:
+        result = repository.purge_old_data(db)
+        db.commit()
+        return result
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Could not purge old data")
 
 
 @router.get("/stats", summary="Live engine statistics")

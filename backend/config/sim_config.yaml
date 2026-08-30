@@ -30,5 +30,6 @@ violations:
   red_fraction: 0.4                  # portion of the cycle that is RED
   red_light_probability: 0.06        # chance a vehicle runs a red when it can
   lane_violation_probability: 0.05
+  parking_violation_probability: 0.04
   speed_violation_probability: 0.09
   speed_over_limit_kmh: [8, 35]      # how far over the limit speeders go
