@@ -313,27 +313,6 @@ def violations_for_plate(
     return [v.to_dict() for v in rows]
 
 
-
-
-
-def violations_for_plate(
-    db: Session,
-    plate: str,
-    date_from: Optional[date_cls] = None,
-    date_to: Optional[date_cls] = None,
-    limit: int = 50,
-) -> list:
-    """Return a plate's violations, newest first, optionally date-scoped."""
-    q = db.query(Violation).filter(plate_matches(Violation.plate_text, plate))
-    start, end = _day_bounds(date_from, date_to)
-    if start:
-        q = q.filter(Violation.timestamp >= start)
-    if end:
-        q = q.filter(Violation.timestamp < end)
-    rows = q.order_by(Violation.timestamp.desc()).limit(limit).all()
-    return [v.to_dict() for v in rows]
-
-
 def enrich_sightings_with_speed(db: Session, plate: str, sightings: list,
                                  date_from: Optional[date_cls] = None,
                                  date_to: Optional[date_cls] = None) -> list:

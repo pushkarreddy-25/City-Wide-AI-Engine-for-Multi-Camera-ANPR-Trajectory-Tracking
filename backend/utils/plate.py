@@ -61,7 +61,7 @@ def strip_separators(text: str) -> str:
     return re.sub(r"[\s\-_]+", "", text.strip()).upper()
 
 
-def canonical_plate(text: str) -> str | None:
+def canonical_plate(text: str):
     """Rebuild the hyphenated storage form from loose input, or ``None``.
 
     ``'mh31ab1234'`` → ``'MH-31-AB-1234'``. Returns ``None`` for partial input
