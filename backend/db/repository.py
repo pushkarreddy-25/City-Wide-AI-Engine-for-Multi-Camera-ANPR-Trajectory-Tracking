@@ -339,7 +339,7 @@ def enrich_sightings_with_speed(db: Session, plate: str, sightings: list,
         ts_str = s.get("timestamp")
         if cam and ts_str and cam in det_map:
             try:
-                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).replace(tzinfo=None)
             except (ValueError, AttributeError):
                 enriched.append(s)
                 continue
