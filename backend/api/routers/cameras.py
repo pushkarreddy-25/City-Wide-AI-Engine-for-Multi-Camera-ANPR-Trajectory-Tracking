@@ -53,31 +53,30 @@ def upload_video_endpoint(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
 
-    import cv2
-    cap = cv2.VideoCapture(temp_path)
-    if not cap.isOpened():
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        raise HTTPException(status_code=400, detail="Failed to open video file. Ensure it is a valid video format.")
-
-    # Get video frame rate (FPS)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if not fps or fps <= 0:
-        fps = 30.0
-
-    # Initialize ProcessingPipeline
-    pipeline = ProcessingPipeline(cameras=cams)
-    
-    all_detections = []
-    all_violations = []
-
-    # Process 2 frames per second to keep it fast and responsive
-    frame_interval = max(1, int(fps / 2))
-    
-    frame_idx = 0
-    start_time = datetime.now()
-
+    cap = None
     try:
+        import cv2
+        cap = cv2.VideoCapture(temp_path)
+        if not cap.isOpened():
+            raise ValueError("Failed to open video file. Ensure it is a valid video format.")
+
+        # Get video frame rate (FPS)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if not fps or fps <= 0:
+            fps = 30.0
+
+        # Initialize ProcessingPipeline
+        pipeline = ProcessingPipeline(cameras=cams)
+        
+        all_detections = []
+        all_violations = []
+
+        # Process 2 frames per second to keep it fast and responsive
+        frame_interval = max(1, int(fps / 2))
+        
+        frame_idx = 0
+        start_time = datetime.now()
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -124,7 +123,8 @@ def upload_video_endpoint(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
     finally:
-        cap.release()
+        if cap is not None:
+            cap.release()
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
