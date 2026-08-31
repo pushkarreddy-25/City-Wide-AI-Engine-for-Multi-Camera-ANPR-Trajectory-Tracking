@@ -15,3 +15,6 @@ uvicorn[standard]>=0.29        # [standard] bundles the websockets impl used by 
 pydantic>=2.6,<3.0
 SQLAlchemy>=2.0,<3.0
 PyYAML>=6.0
+python-multipart>=0.0.12
+opencv-python>=4.8.0
+

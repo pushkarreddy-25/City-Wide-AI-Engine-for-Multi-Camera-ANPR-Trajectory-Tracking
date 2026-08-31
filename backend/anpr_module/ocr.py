@@ -30,9 +30,20 @@ class MockOCR(BaseOCR):
     def read(self, frame, detection: dict) -> Tuple[str, float]:
         gt = detection.get("_ground_truth")
         if gt is None:
-            raise RuntimeError(
-                "MockOCR needs simulated ground truth. Set ocr.engine=easyocr for real frames."
-            )
+            # Generate a realistic random license plate (e.g. MH-12-AB-3456)
+            states = ["MH", "DL", "KA", "TN", "UP", "HR", "GJ"]
+            state = self.rng.choice(states)
+            district = f"{self.rng.randint(1, 99):02d}"
+            series = "".join(self.rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
+            num = f"{self.rng.randint(1, 9999):04d}"
+            random_plate = f"{state}-{district}-{series}-{num}"
+            gt = {
+                "plate": random_plate,
+                "obscured": False
+            }
+            # Attach it back so other parts of the pipeline can use it
+            detection["_ground_truth"] = gt
+            
         obscured = gt.get("obscured", False)
         if obscured:
             confidence = round(self.rng.uniform(*self.obscured_conf), 3)

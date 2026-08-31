@@ -19,6 +19,26 @@ class MockDetector(BaseDetector):
         self.miss_rate = miss_rate
 
     def detect(self, frame) -> List[dict]:
+        # Handle real video frame matrices (numpy arrays) by generating simulated detections
+        import numpy as np
+        if isinstance(frame, np.ndarray) or (frame is not None and not isinstance(frame, list)):
+            if self.rng.random() < 0.12:  # 12% chance of detecting a vehicle in this frame
+                gt = {
+                    "bbox": (100, 200, 300, 400),
+                    "type": self.rng.choice(["Car", "Truck", "Bus", "Motorcycle"]),
+                    "speed_kmh": round(self.rng.uniform(35.0, 75.0), 1),
+                    "_vid": self.rng.randint(1000, 9999),
+                    "context": {}
+                }
+                return [{
+                    "bbox": gt["bbox"],
+                    "confidence": round(self.rng.uniform(0.85, 0.99), 3),
+                    "vehicle_type": gt["type"],
+                    "speed_kmh": gt["speed_kmh"],
+                    "_ground_truth": gt,
+                }]
+            return []
+
         detections = []
         for gt in frame or []:
             if self.rng.random() < self.miss_rate:

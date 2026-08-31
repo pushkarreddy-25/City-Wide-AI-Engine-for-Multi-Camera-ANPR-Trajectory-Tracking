@@ -94,6 +94,20 @@ export const api = {
     })}`),
 
   alerts: (params) => req(`/api/violations/alerts${qs(params)}`),
+  uploadVideo: (cameraId, file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(apiUrl(`/api/cameras/${encodeURIComponent(cameraId)}/upload-video`), {
+      method: "POST",
+      body: fd,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Upload failed (HTTP ${res.status})`);
+      }
+      return res.json();
+    });
+  },
   resolveViolation: (id, notes) =>
     req(`/api/violations/${encodeURIComponent(id)}/resolve`, {
       method: "POST",
