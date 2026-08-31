@@ -3,7 +3,6 @@ import { LiveMap } from "../components/LiveMap.jsx";
 import { PlateChip, Severity } from "../components/PlateChip.jsx";
 import { congestionIndex, fmtTime, prettyType } from "../services/format.js";
 import { api } from "../services/api.js";
-
 // SVG car silhouette that dynamically changes color to match the detected vehicle
 function VehicleSVG({ color = "White" }) {
   const colorMap = {
