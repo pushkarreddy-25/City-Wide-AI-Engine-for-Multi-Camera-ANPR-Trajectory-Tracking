@@ -94,10 +94,10 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
     <section className="view view-dashboard" style={{ display: "flex", flexDirection: "column", height: "100%", padding: "0" }}>
       
       {/* 3-Column Command Workspace */}
-      <div className="dashboard-workspace" style={{ display: "flex", flex: 1, gap: "var(--gap)", padding: "var(--gap)", overflow: "hidden", minHeight: "calc(100vh - 120px)" }}>
+      <div className="dashboard-workspace">
         
         {/* Left Column: Live Statistics & Alerts */}
-        <aside className="left-panel" style={{ width: "300px", minWidth: "280px", display: "flex", flexDirection: "column", gap: "var(--gap)", overflowY: "auto" }}>
+        <aside className="left-panel">
           
           {/* Operational Metrics Panel */}
           <section className="panel" style={{ padding: "16px" }}>
@@ -186,7 +186,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
         </aside>
 
         {/* Center Column: Live Traffic Map */}
-        <main className="center-map-panel" style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--deck)", borderRadius: "var(--r)", border: "1px solid var(--rule)", position: "relative" }}>
+        <main className="center-map-panel">
           
           {/* Map Title Panel */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 18px", borderBottom: "1px solid var(--rule)", background: "var(--deck-2)", zIndex: 10 }}>
@@ -242,7 +242,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
         </main>
 
         {/* Right Column: Live Ingestion & Vehicle Intelligence */}
-        <aside className="right-panel" style={{ width: "360px", minWidth: "340px", display: "flex", flexDirection: "column", gap: "var(--gap)", overflowY: "auto" }}>
+        <aside className="right-panel">
           
           {selectedPlate ? (
             /* Selected Vehicle Profile (Vehicle Intelligence) */

@@ -133,8 +133,8 @@ export function LiveMap({ cameras = [], vehicles = [], selectedJourney = null })
             const dotColor = isFirst ? "#0066cc" : isLast ? "#dc2626" : "#d97706";
             const size = isFirst ? 14 : 18;
             const icon = L.divIcon({
-              className: "journey-dot",
-              html: `<div style="background: ${dotColor}; border: 2.5px solid #ffffff; width: ${size}px; height: ${size}px; border-radius: 50%; box-shadow: 0 2px 8px rgba(15,23,42,0.25);"></div>`,
+              className: "journey-dot pulsing-journey-dot",
+              html: `<div style="background: ${dotColor}; border: 2.5px solid #ffffff; width: ${size}px; height: ${size}px; border-radius: 50%;"></div>`,
               iconSize: [size, size],
               iconAnchor: [size / 2, size / 2],
             });
