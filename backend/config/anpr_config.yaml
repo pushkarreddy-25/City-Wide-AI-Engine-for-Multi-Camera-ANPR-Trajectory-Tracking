@@ -8,20 +8,20 @@
 # simulation to production inference (see backend/anpr_module/*).
 
 detection:
-  engine: mock                # mock | yolo
+  engine: yolo               # mock | yolo
   model_path: "yolov8s.pt"
   confidence_threshold: 0.5
   device: "cpu"               # cpu | cuda
   classes: ["Car", "SUV", "Truck", "Motorcycle", "Auto", "Bus"]
 
 ocr:
-  engine: mock                # mock | easyocr
+  engine:easyocr               # mock | easyocr
   languages: ["en", "hi"]
   confidence_threshold: 0.70  # below this, plate not used for violations
   tracking_threshold: 0.50    # below this, plate not used even for tracking
 
 attributes:
-  engine: mock                # mock | histogram
+  engine: histogram                # mock | histogram
   colors: ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green", "Other"]
 
 processing:
