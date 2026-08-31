@@ -32,8 +32,16 @@ function haversineKm(a, b) {
 function FitBounds({ coords }) {
   const map = useMap();
   useEffect(() => {
-    if (coords.length >= 2) map.fitBounds(coords, { padding: [40, 40] });
-    else if (coords.length === 1) map.setView(coords[0], 14);
+    // Invalidate size in a short timeout to ensure container layout has finished computing
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+      if (coords.length >= 2) {
+        map.fitBounds(coords, { padding: [40, 40] });
+      } else if (coords.length === 1) {
+        map.setView(coords[0], 14);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [map, coords]);
   return null;
 }
