@@ -35,13 +35,13 @@ canvas { display: block; }
 :root {
   color-scheme: light;
 
-  /* surfaces — bright, clean, premium light-mode */
+  /* surfaces — bright, clean, premium light-mode glassmorphic */
   --void:      #f0f3f8;       /* soft gray-blue background */
-  --deck:      rgba(255, 255, 255, 0.85);  /* translucent white panels */
-  --deck-2:    rgba(255, 255, 255, 0.95);  /* brighter translucent panels */
-  --deck-3:    #ffffff;
-  --rule:      rgba(224, 230, 240, 0.8);   /* soft light border */
-  --rule-hi:   rgba(190, 205, 225, 0.8);   /* highlighted soft border */
+  --deck:      rgba(247, 249, 251, 0.85);  /* translucent white glass panels */
+  --deck-2:    rgba(255, 255, 255, 0.9);   /* slightly brighter translucent panels */
+  --deck-3:    rgba(255, 255, 255, 0.95);
+  --rule:      rgba(255, 255, 255, 0.25);  /* soft glass white border */
+  --rule-hi:   rgba(255, 255, 255, 0.45);  /* highlighted glass white border */
 
   /* signal — premium blue/cyan visual language */
   --cyan:        #0066cc;     /* primary blue */
@@ -87,7 +87,10 @@ canvas { display: block; }
 /* ----------------------------------------------------------------- page --- */
 body {
   margin: 0;
-  background: radial-gradient(120% 120% at 50% 0%, #edf3f9 0%, #f4f6fa 100%);
+  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBPcojLE5cGMJeuHSDwbxKRAIBDMROgWvC99q7jrNQI8WB1rPit4FCq7py7-LSJIaxQOVBefQkwV1li-FiBFBHsJj-8eJZwYfLWD6rLyCH8j6LxVAAt9t9cjvSvrioUoOYAX7qqsEeZAf1ckXyVQxWTc93Enp3022N0gIY3uCdcHlHgXy-40P7PNEdosUxxvKE8B52v3a4AXYf24nBtOARLf0ePI5Dkmh1_0S8etTAHXGKq1E9vZTeE2g");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--sans);
   font-size: 14px;
@@ -103,8 +106,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(0, 102, 204, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 102, 204, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 102, 204, 0.01) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 102, 204, 0.01) 1px, transparent 1px);
   background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);
           mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);

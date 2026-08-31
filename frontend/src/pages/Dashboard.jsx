@@ -447,6 +447,25 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
               })}
             </div>
           </section>
+
+          {/* Live Cameras Preview */}
+          <section className="panel" style={{ padding: "16px" }}>
+            <h3 className="eyebrow" style={{ fontSize: "11px", color: "var(--ink-dim)", letterSpacing: "0.08em", marginBottom: "12px", textTransform: "uppercase" }}>Live Cameras</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {cameras.slice(0, 3).map((cam) => (
+                <div key={cam.id} style={{ display: "flex", gap: "10px", background: "var(--void)", border: "1px solid var(--rule)", borderRadius: "8px", padding: "8px", alignItems: "center" }}>
+                  <div style={{ position: "relative", width: "60px", height: "40px", borderRadius: "4px", overflow: "hidden", background: "var(--ink-mute)", flexShrink: 0 }}>
+                    <div style={{ width: "100%", height: "100%", background: "#475569" }} />
+                    <span style={{ position: "absolute", top: "2px", left: "2px", fontSize: "7px", background: "var(--red)", color: "#fff", padding: "1px 3px", borderRadius: "2px", fontWeight: "700" }}>LIVE</span>
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ fontSize: "12px", color: "var(--ink)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</strong>
+                    <span style={{ fontSize: "10px", color: "var(--ink-dim)" }}>{cam.id.toUpperCase()} · Online</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </aside>
       </div>
 
