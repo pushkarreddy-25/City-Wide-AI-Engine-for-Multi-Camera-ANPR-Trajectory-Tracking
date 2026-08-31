@@ -23,12 +23,25 @@ class MockDetector(BaseDetector):
         import numpy as np
         if isinstance(frame, np.ndarray) or (frame is not None and not isinstance(frame, list)):
             if self.rng.random() < 0.12:  # 12% chance of detecting a vehicle in this frame
+                states = ["MH", "DL", "KA", "TN", "UP", "HR", "GJ"]
+                state = self.rng.choice(states)
+                district = f"{self.rng.randint(1, 99):02d}"
+                series = "".join(self.rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
+                num = f"{self.rng.randint(1, 9999):04d}"
+                random_plate = f"{state}-{district}-{series}-{num}"
+                
+                colors = ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green"]
+                random_color = self.rng.choice(colors)
+
                 gt = {
                     "bbox": (100, 200, 300, 400),
                     "type": self.rng.choice(["Car", "Truck", "Bus", "Motorcycle"]),
                     "speed_kmh": round(self.rng.uniform(35.0, 75.0), 1),
                     "_vid": self.rng.randint(1000, 9999),
-                    "context": {}
+                    "context": {},
+                    "plate": random_plate,
+                    "color": random_color,
+                    "obscured": False
                 }
                 return [{
                     "bbox": gt["bbox"],
