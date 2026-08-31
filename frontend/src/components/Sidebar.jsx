@@ -10,12 +10,12 @@ const ICON = {
 };
 
 const ITEMS = [
-  { to: "/", key: "dashboard", label: "Dashboard", end: true },
-  { to: "/violations", key: "violations", label: "Violations" },
-  { to: "/search", key: "search", label: "Search" },
-  { to: "/reports", key: "reports", label: "Reports" },
-  { to: "/upload", key: "upload", label: "Video Ingestion" },
-  { to: "/settings", key: "settings", label: "Settings" },
+  { to: "/", key: "dashboard", label: "Overview", end: true },
+  { to: "/upload", key: "upload", label: "Live ANPR Ingestion" },
+  { to: "/search", key: "search", label: "Vehicles & Journeys" },
+  { to: "/violations", key: "violations", label: "Real-time Alerts" },
+  { to: "/reports", key: "reports", label: "Traffic Analytics" },
+  { to: "/settings", key: "settings", label: "System Settings" },
 ];
 
 export function Sidebar({ openViolations = 0 }) {
