@@ -127,7 +127,220 @@
     document.body.dataset.view = name;
     if (name === "violations") loadViolations();
     if (name === "reports") loadActiveReport();
+    if (name === "upload") {
+      const container = $("#upload-cameras-container");
+      if (container && container.children.length === 0) {
+        initUploadFeeds();
+      }
+    }
     if (name === "settings") loadSettingsDiagnostics();
+  }
+
+  /* ========================================================================
+     Video Ingestion View
+     ==================================================================== */
+  function initUploadFeeds() {
+    const container = $("#upload-cameras-container");
+    if (!container) return;
+    
+    container.innerHTML = "";
+    
+    // Default cameras list fallback if empty
+    const cams = state.cameras.length > 0 ? state.cameras : [
+      { id: "cam_1", name: "Sitabuldi Intersection", speed_limit_kmh: 50 },
+      { id: "cam_2", name: "Dhantoli Intersection", speed_limit_kmh: 40 },
+      { id: "cam_3", name: "Nagpur Square (Variety)", speed_limit_kmh: 50 },
+      { id: "cam_4", name: "Ajni Square", speed_limit_kmh: 60 },
+      { id: "cam_5", name: "Sadar Bazaar", speed_limit_kmh: 40 },
+    ];
+
+    cams.forEach(cam => {
+      const panel = document.createElement("section");
+      panel.className = "panel upload-panel";
+      panel.style.padding = "16px";
+      panel.innerHTML = `
+        <div class="panel-head" style="border-bottom: 1px solid var(--rule); padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 class="eyebrow" style="font-size: 14px; font-weight: 600;">${cam.name}</h2>
+            <span class="mono dim" style="font-size: 11px;">${cam.id.toUpperCase()} · Speed Limit: ${cam.speed_limit_kmh} km/h</span>
+          </div>
+          <span class="feed-count mono" style="background: rgba(0,229,208,.08); border-color: var(--cyan-dim); color: var(--cyan-soft); display: none;" id="cnt-${cam.id}">
+            0 Detections
+          </span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--gap);">
+          <!-- Upload Zone -->
+          <div class="evidence upload-zone" id="zone-${cam.id}" style="min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--rule-hi); border-radius: var(--r); background: var(--deck-2); padding: 20px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s;">
+            <input type="file" accept="video/*" style="display: none;" id="file-${cam.id}" />
+            <div class="zone-idle" id="idle-${cam.id}">
+              <span style="font-size: 28px; color: var(--cyan);">⤓</span>
+              <strong style="display: block; margin-top: 10px; color: var(--ink); font-size: 12px; text-transform: uppercase; letter-spacing: .08em;">Drag & Drop Video</strong>
+              <span class="dim" style="font-size: 11.5px; margin-top: 4px;">or click to browse local traffic feed clips</span>
+            </div>
+            <div class="zone-loading" id="loading-${cam.id}" style="display: none; flex-direction: column; align-items: center;">
+              <div class="spinner" style="width: 32px; height: 32px; border: 3px solid var(--rule-hi); border-top: 3px solid var(--cyan); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
+              <strong style="color: var(--cyan-soft); font-size: 12px;" id="loading-msg-${cam.id}">Uploading & processing video...</strong>
+              <span class="dim" style="font-size: 11px; margin-top: 4px;">Parsing frames, running ANPR & speed tracking...</span>
+            </div>
+            <div class="zone-success" id="success-${cam.id}" style="display: none; flex-direction: column; align-items: center;">
+              <span style="font-size: 28px; color: var(--green);">✓</span>
+              <strong style="display: block; margin-top: 10px; color: var(--green); font-size: 12px; text-transform: uppercase;">Processing Complete</strong>
+              <span class="dim" style="font-size: 11.5px; margin-top: 4px;" id="success-msg-${cam.id}">Processed. Click to upload another clip.</span>
+            </div>
+            <div class="zone-error" id="error-${cam.id}" style="display: none; flex-direction: column; align-items: center;">
+              <span style="font-size: 28px; color: var(--red);">⚠</span>
+              <strong style="display: block; margin-top: 10px; color: var(--red); font-size: 12px; text-transform: uppercase;">Upload Failed</strong>
+              <span style="font-size: 11.5px; margin-top: 4px; color: var(--red);" id="error-msg-${cam.id}">Error details</span>
+            </div>
+          </div>
+          <!-- Results Zone -->
+          <div style="display: flex; flex-direction: column; gap: 10px; min-height: 180px; background: rgba(10, 16, 23, 0.4); border-radius: var(--r); padding: 12px; border: 1px solid var(--rule);">
+            <h3 class="eyebrow" style="font-size: 10.5px; color: var(--ink-mute); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px;">Detections & Analytics</h3>
+            <div id="results-${cam.id}" style="flex: 1; overflow-y: auto; max-height: 220px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--ink-mute); font-size: 12px; font-style: italic;">
+                Upload video to view intelligence analytics...
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(panel);
+
+      const zone = panel.querySelector(`#zone-${cam.id}`);
+      const fileInput = panel.querySelector(`#file-${cam.id}`);
+      
+      zone.addEventListener("click", () => fileInput.click());
+      
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        handleVideoUpload(cam, file);
+      });
+      
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+      });
+      
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files?.[0];
+        handleVideoUpload(cam, file);
+      });
+    });
+  }
+
+  async function handleVideoUpload(cam, file) {
+    if (!file) return;
+    const camId = cam.id;
+    
+    const idleZone = document.getElementById(`idle-${camId}`);
+    const loadingZone = document.getElementById(`loading-${camId}`);
+    const successZone = document.getElementById(`success-${camId}`);
+    const errorZone = document.getElementById(`error-${camId}`);
+    const resultsContainer = document.getElementById(`results-${camId}`);
+    const badge = document.getElementById(`cnt-${camId}`);
+
+    const showZone = (zoneName) => {
+      idleZone.style.display = zoneName === "idle" ? "flex" : "none";
+      loadingZone.style.display = zoneName === "loading" ? "flex" : "none";
+      successZone.style.display = zoneName === "success" ? "flex" : "none";
+      errorZone.style.display = zoneName === "error" ? "flex" : "none";
+    };
+
+    if (!file.type.startsWith("video/")) {
+      showZone("error");
+      document.getElementById(`error-msg-${camId}`).textContent = "Invalid file type. Please upload a video.";
+      return;
+    }
+
+    showZone("loading");
+    resultsContainer.innerHTML = `<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--cyan-soft); font-size: 12px; font-style: italic;">Processing feed in real-time...</div>`;
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    try {
+      const res = await fetch(`/api/cameras/${encodeURIComponent(camId)}/upload-video`, {
+        method: "POST",
+        body: fd
+      });
+      
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Upload failed (HTTP ${res.status})`);
+      }
+      
+      const data = await res.json();
+      
+      showZone("success");
+      document.getElementById(`success-msg-${camId}`).textContent = `Processed ${data.processed_frames} frames. Click to upload another clip.`;
+      
+      const detections = data.detections || [];
+      const violations = data.violations || [];
+      
+      badge.textContent = `${detections.length} Detection${detections.length !== 1 ? 's' : ''}`;
+      badge.style.display = "inline-block";
+
+      if (detections.length === 0) {
+        resultsContainer.innerHTML = `<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: var(--ink-mute); font-size: 12px;">No vehicles detected in this clip.</div>`;
+        return;
+      }
+
+      resultsContainer.innerHTML = "";
+      
+      detections.forEach(d => {
+        const isSpeeder = d.speed_kmh > cam.speed_limit_kmh;
+        const detRow = document.createElement("div");
+        detRow.style.cssText = "display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: linear-gradient(180deg, rgba(15, 22, 29, .95), rgba(11, 17, 23, .9)); border: 1px solid var(--rule); border-radius: var(--r); font-size: 12px;";
+        detRow.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <code class="plate-chip">${d.plate}</code>
+            <span style="color: var(--ink-dim); font-size: 11px;">${d.vehicle_color} · ${d.vehicle_type}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="mono" style="font-weight: 600; color: ${isSpeeder ? 'var(--red)' : 'var(--cyan-soft)'}">
+              ${d.speed_kmh ? `${Math.round(d.speed_kmh)} km/h` : "—"}
+            </span>
+            ${isSpeeder ? `
+              <span style="font-size: 9px; background: rgba(255,59,71,.12); border: 1px solid rgba(255,59,71,.4); color: var(--red); padding: 1px 4px; border-radius: 2px; font-weight: 700;">SPEEDING</span>
+            ` : ""}
+          </div>
+        `;
+        resultsContainer.appendChild(detRow);
+      });
+
+      if (violations.length > 0) {
+        const violDivider = document.createElement("div");
+        violDivider.style.cssText = "margin-top: 8px; border-top: 1px solid var(--rule); padding-top: 8px;";
+        violDivider.innerHTML = `<h4 class="eyebrow" style="font-size: 9.5px; color: var(--red); margin-bottom: 4px;">Generated Violations</h4>`;
+        
+        const violList = document.createElement("div");
+        violList.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
+        
+        violations.forEach(v => {
+          const vRow = document.createElement("div");
+          vRow.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: rgba(255, 59, 71, 0.05); border: 1px solid rgba(255, 59, 71, 0.2); border-radius: var(--r); font-size: 11px;";
+          
+          let prettyType = v.type;
+          if (prettyType === "speed") prettyType = "Speeding";
+          else if (prettyType === "red_light") prettyType = "Red Light";
+          else if (prettyType === "lane") prettyType = "Lane Misuse";
+
+          vRow.innerHTML = `
+            <span style="color: var(--red); font-weight: 600;">⚠ ${prettyType}</span>
+            <span class="mono" style="color: var(--ink);">${v.plate}</span>
+          `;
+          violList.appendChild(vRow);
+        });
+        
+        violDivider.appendChild(violList);
+        resultsContainer.appendChild(violDivider);
+      }
+
+    } catch (err) {
+      showZone("error");
+      document.getElementById(`error-msg-${camId}`).textContent = err.message || "Failed to process video.";
+    }
   }
 
   /* ========================================================================
