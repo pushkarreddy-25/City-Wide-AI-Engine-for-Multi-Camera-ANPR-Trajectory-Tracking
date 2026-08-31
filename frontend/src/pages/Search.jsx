@@ -107,24 +107,35 @@ function JourneyMap({ sightings = [], violations = [] }) {
         <Polyline
           positions={coords}
           pathOptions={{
-            color: "#00e5d0",
-            weight: 4,
-            opacity: 0.85,
+            color: "#3b82f6",
+            weight: 6,
+            opacity: 0.9,
             className: "journey-route-line"
           }}
         />
         {points.map((point) => {
           const pointVios = vioMap[point.camera_id] || [];
           const hasVio = pointVios.length > 0;
-          const markerColor = hasVio ? (VIO_COLOR[pointVios[0]?.type] || "#ff3b47") : "#00e5d0";
+          
+          const isFirst = point.index === 0;
+          const isLast = point.index === points.length - 1;
+          
+          // Color coding matching the user's screenshot:
+          // Start point = Blue, End point = Red, Intermediate points = Orange
+          const markerColor = isFirst
+            ? "#3b82f6" // Blue
+            : isLast
+            ? "#ef4444" // Red
+            : "#f97316"; // Orange
+            
+          // Start dot is slightly smaller in the screenshot (e.g. 18px), others are 24px
+          const size = isFirst ? 18 : 24;
 
           const icon = L.divIcon({
             className: `journey-marker${hasVio ? " journey-marker--vio" : ""}`,
-            html: `<div class="journey-marker-inner" style="background: ${markerColor}; border-color: ${hasVio ? markerColor : "#0ea5e9"}">
-                     <span class="journey-marker-number">${point.index + 1}</span>
-                   </div>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
+            html: `<div class="journey-marker-inner" style="background: ${markerColor}; border: 3px solid #ffffff !important; box-shadow: 0 2px 8px rgba(0,0,0,0.35); width: ${size}px; height: ${size}px; border-radius: 50%;"></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
           });
 
           return (
