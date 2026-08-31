@@ -76,7 +76,7 @@ export function LiveMap({ cameras = [], vehicles = [] }) {
       zoom={12}
       scrollWheelZoom
       className="live-map"
-      style={{ height: "100%", width: "100%", minHeight: "480px", maxHeight: "calc(100vh - 280px)" }}
+      style={{ height: "100%", width: "100%", minHeight: "480px" }}
       minZoom={8}
       maxZoom={18}
     >
