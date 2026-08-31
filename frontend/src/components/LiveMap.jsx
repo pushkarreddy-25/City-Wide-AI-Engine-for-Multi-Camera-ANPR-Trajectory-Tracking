@@ -1,13 +1,21 @@
 import { useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 
-function MapInvalidator() {
+function MapResizeObserver() {
   const map = useMap();
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize();
-    }, 100);
-    return () => clearTimeout(timer);
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, [map]);
   return null;
 }
@@ -72,7 +80,7 @@ export function LiveMap({ cameras = [], vehicles = [] }) {
       minZoom={8}
       maxZoom={18}
     >
-      <MapInvalidator />
+      <MapResizeObserver />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -32,17 +32,34 @@ function haversineKm(a, b) {
 function FitBounds({ coords }) {
   const map = useMap();
   useEffect(() => {
-    // Invalidate size in a short timeout to ensure container layout has finished computing
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-      if (coords.length >= 2) {
-        map.fitBounds(coords, { padding: [40, 40] });
-      } else if (coords.length === 1) {
-        map.setView(coords[0], 14);
-      }
-    }, 100);
-    return () => clearTimeout(timer);
+    if (coords.length >= 2) {
+      map.fitBounds(coords, { padding: [40, 40] });
+    } else if (coords.length === 1) {
+      map.setView(coords[0], 14);
+    }
   }, [map, coords]);
+  return null;
+}
+
+/* ──────────────────────────────────────────────
+   Map Resize Observer helper to solve container sizing issues
+────────────────────────────────────────────── */
+function MapResizeObserver() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [map]);
   return null;
 }
 
@@ -108,6 +125,7 @@ function JourneyMap({ sightings = [], violations = [] }) {
         maxZoom={18}
       >
         <FitBounds coords={coords} />
+        <MapResizeObserver />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
