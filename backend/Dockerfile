@@ -11,7 +11,7 @@ WORKDIR /app/backend
 
 # System deps: libpq for psycopg2 (PostgreSQL production path).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq5 curl \
+    && apt-get install -y --no-install-recommends libpq5 curl libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps first for better layer caching.
