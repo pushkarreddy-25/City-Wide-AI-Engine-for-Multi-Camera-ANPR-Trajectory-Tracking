@@ -18,3 +18,4 @@ PyYAML>=6.0
 python-multipart>=0.0.12
 opencv-python-headless>=4.8.0
 ultralytics>=8.0.0
+easyocr>=1.7.0
