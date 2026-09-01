@@ -35,31 +35,31 @@ canvas { display: block; }
 :root {
   color-scheme: light;
 
-  /* surfaces — bright, clean, premium light-mode glassmorphic */
-  --void:      #f0f3f8;       /* soft gray-blue background */
-  --deck:      rgba(247, 249, 251, 0.85);  /* translucent white glass panels */
-  --deck-2:    rgba(255, 255, 255, 0.9);   /* slightly brighter translucent panels */
-  --deck-3:    rgba(255, 255, 255, 0.95);
-  --rule:      rgba(255, 255, 255, 0.25);  /* soft glass white border */
-  --rule-hi:   rgba(255, 255, 255, 0.45);  /* highlighted glass white border */
+  /* surfaces — deep premium dark glassmorphic */
+  --void:      #0b0f19;       /* deep dark background */
+  --deck:      rgba(15, 23, 42, 0.55);  /* translucent dark glass panels */
+  --deck-2:    rgba(30, 41, 59, 0.65);   /* slightly brighter translucent panels */
+  --deck-3:    rgba(51, 65, 85, 0.75);
+  --rule:      rgba(255, 255, 255, 0.1);  /* soft glass white border */
+  --rule-hi:   rgba(255, 255, 255, 0.2);  /* highlighted glass border */
 
   /* signal — premium blue/cyan visual language */
-  --cyan:        #0066cc;     /* primary blue */
-  --cyan-soft:   #0055bb;     /* deep blue accents */
-  --cyan-strong: #0088ff;     /* vibrant blue/cyan */
-  --cyan-dim:    #e0efff;     /* very light translucent blue wash */
-  --cyan-wash:   rgba(0, 102, 204, 0.06);
+  --cyan:        #38bdf8;     /* vibrant sky blue */
+  --cyan-soft:   #0284c7;     /* deep blue accents */
+  --cyan-strong: #7dd3fc;     /* bright cyan */
+  --cyan-dim:    rgba(56, 189, 248, 0.15);     /* very light translucent blue wash */
+  --cyan-wash:   rgba(56, 189, 248, 0.08);
 
   /* severity — clean and restrained */
-  --amber:      #d97706;      /* dark amber for readability */
-  --amber-wash: rgba(217, 119, 6, 0.08);
-  --red:        #dc2626;      /* dark red for readability */
-  --red-wash:   rgba(220, 38, 38, 0.08);
-  --green:      #16a34a;      /* dark green for readability */
+  --amber:      #f59e0b;      /* amber for readability */
+  --amber-wash: rgba(245, 158, 11, 0.1);
+  --red:        #ef4444;      /* red for readability */
+  --red-wash:   rgba(239, 68, 68, 0.1);
+  --green:      #22c55e;      /* green for readability */
 
-  /* ink — deep blue/slate text */
-  --ink:      #0f172a;        /* slate-900 */
-  --ink-dim:  #475569;        /* slate-600 */
+  /* ink — high contrast bright text */
+  --ink:      #f8fafc;        /* slate-50 */
+  --ink-dim:  #cbd5e1;        /* slate-300 */
   --ink-mute: #94a3b8;        /* slate-400 */
 
   /* type */
@@ -87,9 +87,7 @@ canvas { display: block; }
 /* ----------------------------------------------------------------- page --- */
 body {
   margin: 0;
-  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBPcojLE5cGMJeuHSDwbxKRAIBDMROgWvC99q7jrNQI8WB1rPit4FCq7py7-LSJIaxQOVBefQkwV1li-FiBFBHsJj-8eJZwYfLWD6rLyCH8j6LxVAAt9t9cjvSvrioUoOYAX7qqsEeZAf1ckXyVQxWTc93Enp3022N0gIY3uCdcHlHgXy-40P7PNEdosUxxvKE8B52v3a4AXYf24nBtOARLf0ePI5Dkmh1_0S8etTAHXGKq1E9vZTeE2g");
-  background-size: cover;
-  background-position: center;
+  background: radial-gradient(circle at 50% -20%, #1e293b, #020617);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--sans);
@@ -98,7 +96,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* A very subtle coordinate grid texture for visual depth, matched to light mode */
+/* A very subtle coordinate grid texture for visual depth, matched to dark mode */
 body::before {
   content: "";
   position: fixed;
@@ -106,8 +104,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(0, 102, 204, 0.01) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 102, 204, 0.01) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);
           mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);
@@ -372,10 +370,11 @@ body::before {
   min-width: 0;
   background: var(--deck);
   border: 1px solid var(--rule);
-  border-radius: 14px;
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 /* Corner brackets disabled */
 .panel::before,
