@@ -132,7 +132,15 @@ body {
 }
 
 body, .app-shell, .topbar, .brand, .sidebar, .panel, .content, .nav-item, input, button, .conn, svg, path {
-  transition: background-color 0.4s ease, background 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, fill 0.4s ease;
+  transition: background-color 0.4s ease, background 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, fill 0.4s ease, transform 0.15s ease;
+}
+
+/* Micro-interactions */
+button:active, .nav-item:active, .header-icon-btn:active {
+  transform: scale(0.96);
+}
+.nav-item:hover, button:hover {
+  transform: translateY(-1px);
 }
 
 /* A very subtle coordinate grid texture for visual depth, matched to theme */

@@ -168,7 +168,7 @@ export function Upload({ cameras = [] }) {
                 </div>
 
                 {/* Right Side: Results Display */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", minHeight: "180px", background: "rgba(10, 16, 23, 0.4)", borderRadius: "var(--r)", padding: "12px", border: "1px solid var(--rule)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", minHeight: "180px", background: "var(--void)", borderRadius: "var(--r)", padding: "12px", border: "1px solid var(--rule)" }}>
                   <h3 className="eyebrow" style={{ fontSize: "10.5px", color: "var(--ink-mute)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: "4px" }}>
                     Detections & Analytics
                   </h3>
@@ -208,7 +208,7 @@ export function Upload({ cameras = [] }) {
                             justifyContent: "space-between",
                             gap: "8px",
                             padding: "6px 10px",
-                            background: "linear-gradient(180deg, rgba(15, 22, 29, .95), rgba(11, 17, 23, .9))",
+                            background: "var(--deck-3)",
                             border: "1px solid var(--rule)",
                             borderRadius: "var(--r)",
                             fontSize: "12px"

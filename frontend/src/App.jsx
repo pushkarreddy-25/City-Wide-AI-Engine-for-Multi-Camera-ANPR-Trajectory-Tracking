@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { PageWrapper } from "./components/PageWrapper.jsx";
 import { Topbar } from "./components/Topbar.jsx";
 import { Sidebar } from "./components/Sidebar.jsx";
 import { ViolationModal } from "./components/ViolationModal.jsx";
@@ -14,6 +16,7 @@ import { Settings } from "./pages/Settings.jsx";
 import { Upload } from "./pages/Upload.jsx";
 
 export function App() {
+  const location = useLocation();
   const { push } = useToast();
   const [modalViolation, setModalViolation] = useState(null);
   const [cameras, setCameras] = useState([]);
@@ -50,14 +53,16 @@ export function App() {
       <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} />
       <Sidebar openViolations={openViolations} />
       <main className="content">
-        <Routes>
-          <Route path="/" element={<Dashboard cameras={cameras} snapshot={snapshot} feed={feed} openModal={openModal} />} />
-          <Route path="/violations" element={<Violations openModal={openModal} />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/upload" element={<Upload cameras={cameras} />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/" element={<PageWrapper><Dashboard cameras={cameras} snapshot={snapshot} feed={feed} openModal={openModal} /></PageWrapper>} />
+            <Route path="/violations" element={<PageWrapper><Violations openModal={openModal} /></PageWrapper>} />
+            <Route path="/search" element={<PageWrapper><Search /></PageWrapper>} />
+            <Route path="/reports" element={<PageWrapper><Reports /></PageWrapper>} />
+            <Route path="/upload" element={<PageWrapper><Upload cameras={cameras} /></PageWrapper>} />
+            <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+          </Routes>
+        </AnimatePresence>
       </main>
 
       {modalViolation && (
