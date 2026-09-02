@@ -4,7 +4,7 @@ import { fmtTime } from "../services/format.js";
 
 const STATUS_LABEL = { live: "Live", connecting: "Connecting", down: "Reconnecting" };
 
-export function Topbar({ status, stats }) {
+export function Topbar({ status, stats, theme, toggleTheme }) {
   const navigate = useNavigate();
   const [searchVal, setSearchVal] = useState("");
   const [localTime, setLocalTime] = useState("");
@@ -87,8 +87,26 @@ export function Topbar({ status, stats }) {
             <span style={{ color: "var(--ink-dim)" }}>{STATUS_LABEL[status] || status}</span>
           </div>
 
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            style={{ position: "relative", width: "36px", height: "36px", borderRadius: "50%", background: "var(--void)", border: "1px solid var(--rule)", display: "flex", alignItems: "center", justifyContent: "center" }} 
+            aria-label="Toggle Theme" 
+            className="header-icon-btn"
+          >
+            {theme === "dark" ? (
+              <svg viewBox="0 0 24 24" style={{ width: "18px", height: "18px", fill: "var(--amber)" }}>
+                <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.758a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" style={{ width: "18px", height: "18px", fill: "var(--ink-dim)" }}>
+                <path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" />
+              </svg>
+            )}
+          </button>
+
           {/* Notifications Button */}
-          <button style={{ position: "relative", width: "36px", height: "36px", borderRadius: "50%", background: "var(--void)", border: "1px solid var(--rule)", display: "flex", alignItems: "center", justifyCenter: "center" }} aria-label="Notifications" className="header-icon-btn">
+          <button style={{ position: "relative", width: "36px", height: "36px", borderRadius: "50%", background: "var(--void)", border: "1px solid var(--rule)", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Notifications" className="header-icon-btn">
             <svg viewBox="0 0 24 24" style={{ width: "18px", height: "18px", fill: "var(--ink-dim)" }}>
               <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
             </svg>

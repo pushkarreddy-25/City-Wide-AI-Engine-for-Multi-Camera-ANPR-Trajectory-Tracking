@@ -17,6 +17,16 @@ export function App() {
   const { push } = useToast();
   const [modalViolation, setModalViolation] = useState(null);
   const [cameras, setCameras] = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem("anpr-theme") || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("anpr-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
 
   const openModal = useCallback((v) => setModalViolation(v), []);
   const onNewAlert = useCallback((v) => push(v, openModal), [push, openModal]);
@@ -37,7 +47,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <Topbar status={status} stats={snapshot.stats} />
+      <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} />
       <Sidebar openViolations={openViolations} />
       <main className="content">
         <Routes>

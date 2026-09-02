@@ -33,61 +33,96 @@ canvas { display: block; }
 
 /* --------------------------------------------------------------- tokens --- */
 :root {
-  color-scheme: light;
-
-  /* surfaces — deep premium dark glassmorphic */
-  --void:      #0b0f19;       /* deep dark background */
-  --deck:      rgba(15, 23, 42, 0.55);  /* translucent dark glass panels */
-  --deck-2:    rgba(30, 41, 59, 0.65);   /* slightly brighter translucent panels */
-  --deck-3:    rgba(51, 65, 85, 0.75);
-  --rule:      rgba(255, 255, 255, 0.1);  /* soft glass white border */
-  --rule-hi:   rgba(255, 255, 255, 0.2);  /* highlighted glass border */
-
-  /* signal — premium blue/cyan visual language */
-  --cyan:        #38bdf8;     /* vibrant sky blue */
-  --cyan-soft:   #0284c7;     /* deep blue accents */
-  --cyan-strong: #7dd3fc;     /* bright cyan */
-  --cyan-dim:    rgba(56, 189, 248, 0.15);     /* very light translucent blue wash */
-  --cyan-wash:   rgba(56, 189, 248, 0.08);
-
-  /* severity — clean and restrained */
-  --amber:      #f59e0b;      /* amber for readability */
-  --amber-wash: rgba(245, 158, 11, 0.1);
-  --red:        #ef4444;      /* red for readability */
-  --red-wash:   rgba(239, 68, 68, 0.1);
-  --green:      #22c55e;      /* green for readability */
-
-  /* ink — high contrast bright text */
-  --ink:      #f8fafc;        /* slate-50 */
-  --ink-dim:  #cbd5e1;        /* slate-300 */
-  --ink-mute: #94a3b8;        /* slate-400 */
-
-  /* type */
+  /* type & metrics shared across themes */
   --display: "Inter", "Geist", "SF Pro", system-ui, -apple-system, sans-serif;
   --sans:    "Inter", "Geist", "SF Pro", system-ui, -apple-system, sans-serif;
   --mono:    "Share Tech Mono", ui-monospace, monospace;
-
-  /* metrics — rounded corners, 12-18px */
   --r:      12px;
   --r-lg:   16px;
-  --rail-w: 240px;            /* wider sidebar for premium visual balance */
+  --rail-w: 240px;
   --top-h:  64px;
-  --gap:    16px;             /* modern spacing */
-
-  /* the eyebrow/label treatment */
+  --gap:    16px;
   --label: 600 11px/1 var(--display);
   --track: .08em;
-
-  /* shadows — premium soft shadows */
   --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
 }
 
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* background & grid */
+  --bg-gradient: radial-gradient(circle at 50% -20%, #1e293b, #020617);
+  --grid-color: rgba(255, 255, 255, 0.03);
+
+  /* surfaces — deep premium dark glassmorphic */
+  --void:      #0b0f19;       
+  --deck:      rgba(15, 23, 42, 0.55);  
+  --deck-2:    rgba(30, 41, 59, 0.65);   
+  --deck-3:    rgba(51, 65, 85, 0.75);
+  --rule:      rgba(255, 255, 255, 0.1);  
+  --rule-hi:   rgba(255, 255, 255, 0.2);  
+
+  /* signal — premium blue/cyan visual language */
+  --cyan:        #38bdf8;     
+  --cyan-soft:   #0284c7;     
+  --cyan-strong: #7dd3fc;     
+  --cyan-dim:    rgba(56, 189, 248, 0.15);     
+  --cyan-wash:   rgba(56, 189, 248, 0.08);
+
+  /* severity */
+  --amber:      #f59e0b;      
+  --amber-wash: rgba(245, 158, 11, 0.1);
+  --red:        #ef4444;      
+  --red-wash:   rgba(239, 68, 68, 0.1);
+  --green:      #22c55e;      
+
+  /* ink — high contrast bright text */
+  --ink:      #f8fafc;        
+  --ink-dim:  #cbd5e1;        
+  --ink-mute: #94a3b8;        
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* background & grid */
+  --bg-gradient: radial-gradient(circle at 50% -20%, #f1f5f9, #e2e8f0);
+  --grid-color: rgba(0, 102, 204, 0.04);
+
+  /* surfaces — bright, clean, premium light-mode glassmorphic */
+  --void:      #f0f3f8;       
+  --deck:      rgba(255, 255, 255, 0.55);  
+  --deck-2:    rgba(255, 255, 255, 0.7);   
+  --deck-3:    rgba(255, 255, 255, 0.85);
+  --rule:      rgba(255, 255, 255, 0.5);  
+  --rule-hi:   rgba(255, 255, 255, 0.7);  
+
+  /* signal */
+  --cyan:        #0066cc;     
+  --cyan-soft:   #0055bb;     
+  --cyan-strong: #0088ff;     
+  --cyan-dim:    #e0efff;     
+  --cyan-wash:   rgba(0, 102, 204, 0.06);
+
+  /* severity */
+  --amber:      #d97706;      
+  --amber-wash: rgba(217, 119, 6, 0.08);
+  --red:        #dc2626;      
+  --red-wash:   rgba(220, 38, 38, 0.08);
+  --green:      #16a34a;      
+
+  /* ink */
+  --ink:      #0f172a;        
+  --ink-dim:  #475569;        
+  --ink-mute: #94a3b8;        
+}
+
 /* ----------------------------------------------------------------- page --- */
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% -20%, #1e293b, #020617);
+  background: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--sans);
@@ -96,7 +131,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* A very subtle coordinate grid texture for visual depth, matched to dark mode */
+body, .app-shell, .topbar, .brand, .sidebar, .panel, .content, .nav-item, input, button, .conn, svg, path {
+  transition: background-color 0.4s ease, background 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, fill 0.4s ease;
+}
+
+/* A very subtle coordinate grid texture for visual depth, matched to theme */
 body::before {
   content: "";
   position: fixed;
@@ -104,8 +143,8 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
   background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);
           mask-image: radial-gradient(130% 90% at 50% 0%, #000 35%, transparent 90%);
