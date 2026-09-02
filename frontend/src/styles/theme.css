@@ -136,8 +136,8 @@ body, .app-shell, .topbar, .brand, .sidebar, .panel, .content, .nav-item, input,
 }
 
 /* Micro-interactions */
-button:active, .nav-item:active, .header-icon-btn:active {
-  transform: scale(0.96);
+button:active, .nav-item:active, .header-icon-btn:active, .panel:active, .feed-item:active, .evidence:active {
+  transform: scale(0.98);
 }
 .nav-item:hover, button:hover {
   transform: translateY(-1px);
@@ -409,6 +409,11 @@ body::before {
 .view-desc { margin-top: 5px; color: var(--ink-dim); font-size: 13px; max-width: 62ch; }
 .view-actions { display: flex; gap: 8px; }
 
+@keyframes sectionFadeUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* --------------------------------------------------------------- panels --- */
 .panel {
   position: relative;
@@ -422,7 +427,16 @@ body::before {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
+  animation: sectionFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
+
+/* Stagger panel loading */
+.panel:nth-of-type(1) { animation-delay: 0.05s; }
+.panel:nth-of-type(2) { animation-delay: 0.1s; }
+.panel:nth-of-type(3) { animation-delay: 0.15s; }
+.panel:nth-of-type(4) { animation-delay: 0.2s; }
+.panel:nth-of-type(5) { animation-delay: 0.25s; }
+.panel:nth-of-type(6) { animation-delay: 0.3s; }
 /* Corner brackets disabled */
 .panel::before,
 .panel::after {
@@ -747,7 +761,7 @@ body::before {
   padding: 8px 14px;
   border: 1px solid var(--rule-hi);
   border-radius: var(--r);
-  background: linear-gradient(180deg, rgba(18,26,33,.96), rgba(11,16,22,.96));
+  background: var(--void);
   color: var(--ink-dim);
   font-family: var(--display);
   font-size: 11px;
@@ -760,7 +774,7 @@ body::before {
 .btn:hover {
   color: var(--ink);
   border-color: var(--cyan-dim);
-  background: linear-gradient(180deg, rgba(21,31,40,.98), rgba(12,18,23,.96));
+  background: var(--deck-3);
   transform: translateY(-1px);
 }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
