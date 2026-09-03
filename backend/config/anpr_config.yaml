@@ -1,8 +1,9 @@
 # ANPR pipeline configuration.
 #
 # `engine: mock`  -> runs anywhere, no GPU. Synthetic detections/plates.
-# `engine: mock`  -> real YOLOv8 (requires `ultralytics` + weights + GPU/CPU).
-# `engine: mock` -> real EasyOCR (requires `easyocr` + torch).
+# `engine: yolo`  -> real YOLOv8 (requires `ultralytics` + weights + GPU/CPU).
+# `engine: easyocr` -> real EasyOCR (requires `easyocr` + torch).
+# `engine: paddleocr` -> real PaddleOCR (requires `paddleocr`).
 #
 # Switching an engine to its real value is the ONLY change needed to move from
 # simulation to production inference (see backend/anpr_module/*).
@@ -15,7 +16,7 @@ detection:
   classes: ["Car", "SUV", "Truck", "Motorcycle", "Auto", "Bus"]
 
 ocr:
-  engine: mock             # mock | easyocr
+  engine: mock             # mock | easyocr | paddleocr
   languages: ["en", "hi"]
   confidence_threshold: 0.70  # below this, plate not used for violations
   tracking_threshold: 0.50    # below this, plate not used even for tracking

@@ -90,3 +90,39 @@ class EasyOCROCR(BaseOCR):
         text = "".join(p[0] for p in parts)
         confidence = sum(p[1] for p in parts) / len(parts)
         return text, float(confidence)
+
+
+class PaddleOCROCR(BaseOCR):
+    """Real OCR using PaddleOCR. Requires ``paddleocr`` (and optionally paddlepaddle-gpu).
+
+    Crops the lower-middle plate region from the vehicle bbox and reads it.
+    PaddleOCR provides excellent accuracy out of the box for text detection and recognition.
+    """
+
+    def __init__(self, languages=("en",), confidence_threshold: float = 0.7):
+        from paddleocr import PaddleOCR  # noqa: heavy optional dependency
+        # PaddleOCR uses language codes like 'en'
+        lang = languages[0] if languages else "en"
+        self.reader = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
+        self.confidence_threshold = confidence_threshold
+
+    def read(self, frame, detection: dict) -> Tuple[str, float]:
+        x1, y1, x2, y2 = [int(v) for v in detection["bbox"]]
+        # Plate typically sits in the lower-middle of the vehicle box.
+        py1 = int(y1 + 0.55 * (y2 - y1))
+        crop = frame[py1:y2, x1:x2]
+        
+        # ocr() returns a list of results (one per text block)
+        # result format: [[[[x1,y1], [x2,y2], [x3,y3], [x4,y4]], ('text', confidence)], ...]
+        results = self.reader.ocr(crop, cls=True)
+        
+        if not results or not results[0]:
+            return "", 0.0
+            
+        parts = [(txt, conf) for _, (txt, conf) in results[0] if conf >= self.confidence_threshold]
+        if not parts:
+            return "", 0.0
+            
+        text = "".join(p[0] for p in parts)
+        confidence = sum(p[1] for p in parts) / len(parts)
+        return text, float(confidence)

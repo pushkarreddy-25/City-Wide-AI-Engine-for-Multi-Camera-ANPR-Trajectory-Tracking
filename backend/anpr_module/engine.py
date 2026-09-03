@@ -10,7 +10,7 @@ from typing import List, Optional
 from anpr_module.attributes import HistogramColorClassifier, MockAttributeClassifier
 from anpr_module.base import VehicleDetection
 from anpr_module.detection import MockDetector, YOLODetector
-from anpr_module.ocr import EasyOCROCR, MockOCR
+from anpr_module.ocr import EasyOCROCR, MockOCR, PaddleOCROCR
 from utils.config import get_anpr_config
 from utils.plate import is_valid_plate, normalize_plate
 
@@ -91,6 +91,11 @@ class ANPREngine:
         engine = cfg.get("engine", "mock")
         if engine == "easyocr":
             return EasyOCROCR(
+                languages=tuple(cfg.get("languages", ["en"])),
+                confidence_threshold=cfg.get("confidence_threshold", 0.7),
+            )
+        elif engine == "paddleocr":
+            return PaddleOCROCR(
                 languages=tuple(cfg.get("languages", ["en"])),
                 confidence_threshold=cfg.get("confidence_threshold", 0.7),
             )

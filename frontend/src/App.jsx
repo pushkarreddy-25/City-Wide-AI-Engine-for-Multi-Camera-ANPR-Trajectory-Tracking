@@ -8,6 +8,7 @@ import { ViolationModal } from "./components/ViolationModal.jsx";
 import { useToast } from "./components/ToastHost.jsx";
 import { useLiveSnapshot } from "./hooks/useLiveSnapshot.js";
 import { api } from "./services/api.js";
+import { StartupSequence } from "./components/StartupSequence.jsx";
 
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx").then(m => ({ default: m.Dashboard })));
 const Violations = lazy(() => import("./pages/Violations.jsx").then(m => ({ default: m.Violations })));
@@ -22,6 +23,13 @@ export function App() {
   const [modalViolation, setModalViolation] = useState(null);
   const [cameras, setCameras] = useState([]);
   const [theme, setTheme] = useState(() => localStorage.getItem("anpr-theme") || "dark");
+  const [bootState, setBootState] = useState("loading");
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setBootState("welcome"), 2500);
+    const t2 = setTimeout(() => setBootState("ready"), 5000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -50,7 +58,15 @@ export function App() {
   }, [patchViolation]);
 
   return (
-    <div className="app-shell">
+    <>
+      <AnimatePresence>
+        {bootState !== "ready" && <StartupSequence key="startup" state={bootState} />}
+      </AnimatePresence>
+      <div className="app-shell" style={{ 
+        opacity: bootState === "ready" ? 1 : 0, 
+        transition: "opacity 0.8s ease-in", 
+        pointerEvents: bootState === "ready" ? "auto" : "none" 
+      }}>
       <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} />
       <Sidebar openViolations={openViolations} />
       <main className="content">
@@ -75,6 +91,7 @@ export function App() {
           onResolved={onResolved}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
