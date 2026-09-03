@@ -13,5 +13,18 @@ export default defineConfig({
       "/ws": { target: "ws://localhost:8000", ws: true },
     },
   },
-  build: { outDir: "dist", sourcemap: true },
+  build: { 
+    outDir: "dist", 
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charting: ['chart.js', 'react-chartjs-2'],
+          maps: ['leaflet', 'react-leaflet'],
+          animations: ['framer-motion']
+        }
+      }
+    }
+  },
 });

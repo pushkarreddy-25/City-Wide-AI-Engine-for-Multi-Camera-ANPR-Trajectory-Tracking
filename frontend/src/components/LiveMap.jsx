@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, Polyline, Marker } from "react-leaflet";
 import L from "leaflet";
 
@@ -35,7 +35,7 @@ function densityRadius(count) {
   return Math.min(22, 9 + count * 2.2);
 }
 
-export function LiveMap({ cameras = [], vehicles = [], selectedJourney = null }) {
+export const LiveMap = memo(function LiveMap({ cameras = [], vehicles = [], selectedJourney = null }) {
   const cameraCounts = new Map();
   for (const vehicle of vehicles) {
     const cameraId = vehicle?.camera_id || vehicle?.cameraId;
@@ -150,4 +150,4 @@ export function LiveMap({ cameras = [], vehicles = [], selectedJourney = null })
       )}
     </MapContainer>
   );
-}
+});

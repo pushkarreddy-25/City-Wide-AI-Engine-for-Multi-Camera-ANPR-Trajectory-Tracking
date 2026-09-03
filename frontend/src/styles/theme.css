@@ -132,7 +132,7 @@ body {
 }
 
 body, .app-shell, .topbar, .brand, .sidebar, .panel, .content, .nav-item, input, button, .conn, svg, path {
-  transition: background-color 0.4s ease, background 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, fill 0.4s ease, transform 0.15s ease;
+  transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), fill 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Micro-interactions */
@@ -410,7 +410,7 @@ body::before {
 .view-actions { display: flex; gap: 8px; }
 
 @keyframes sectionFadeUp {
-  0% { opacity: 0; transform: translateY(20px); }
+  0% { opacity: 0; transform: translateY(30px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
@@ -427,7 +427,7 @@ body::before {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  animation: sectionFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation: sectionFadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* Stagger panel loading */

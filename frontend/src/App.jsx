@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { PageWrapper } from "./components/PageWrapper.jsx";
@@ -8,12 +8,13 @@ import { ViolationModal } from "./components/ViolationModal.jsx";
 import { useToast } from "./components/ToastHost.jsx";
 import { useLiveSnapshot } from "./hooks/useLiveSnapshot.js";
 import { api } from "./services/api.js";
-import { Dashboard } from "./pages/Dashboard.jsx";
-import { Violations } from "./pages/Violations.jsx";
-import { Search } from "./pages/Search.jsx";
-import { Reports } from "./pages/Reports.jsx";
-import { Settings } from "./pages/Settings.jsx";
-import { Upload } from "./pages/Upload.jsx";
+
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx").then(m => ({ default: m.Dashboard })));
+const Violations = lazy(() => import("./pages/Violations.jsx").then(m => ({ default: m.Violations })));
+const Search = lazy(() => import("./pages/Search.jsx").then(m => ({ default: m.Search })));
+const Reports = lazy(() => import("./pages/Reports.jsx").then(m => ({ default: m.Reports })));
+const Settings = lazy(() => import("./pages/Settings.jsx").then(m => ({ default: m.Settings })));
+const Upload = lazy(() => import("./pages/Upload.jsx").then(m => ({ default: m.Upload })));
 
 export function App() {
   const location = useLocation();
@@ -53,16 +54,18 @@ export function App() {
       <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} />
       <Sidebar openViolations={openViolations} />
       <main className="content">
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<PageWrapper><Dashboard cameras={cameras} snapshot={snapshot} feed={feed} openModal={openModal} /></PageWrapper>} />
-            <Route path="/violations" element={<PageWrapper><Violations openModal={openModal} /></PageWrapper>} />
-            <Route path="/search" element={<PageWrapper><Search /></PageWrapper>} />
-            <Route path="/reports" element={<PageWrapper><Reports /></PageWrapper>} />
-            <Route path="/upload" element={<PageWrapper><Upload cameras={cameras} /></PageWrapper>} />
-            <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
-          </Routes>
-        </AnimatePresence>
+        <Suspense fallback={<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-mute)", minHeight: "100%" }}>Loading interface...</div>}>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<PageWrapper><Dashboard cameras={cameras} snapshot={snapshot} feed={feed} openModal={openModal} /></PageWrapper>} />
+              <Route path="/violations" element={<PageWrapper><Violations openModal={openModal} /></PageWrapper>} />
+              <Route path="/search" element={<PageWrapper><Search /></PageWrapper>} />
+              <Route path="/reports" element={<PageWrapper><Reports /></PageWrapper>} />
+              <Route path="/upload" element={<PageWrapper><Upload cameras={cameras} /></PageWrapper>} />
+              <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+            </Routes>
+          </AnimatePresence>
+        </Suspense>
       </main>
 
       {modalViolation && (
