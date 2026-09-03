@@ -48,7 +48,7 @@ class ProcessingWorker:
                         camera_id,
                         frame,
                         payload.get("timestamp"),
-                        publish=False,
+                        publish=True,
                         track=payload.get("track", True),
                     )
                     db.commit()
