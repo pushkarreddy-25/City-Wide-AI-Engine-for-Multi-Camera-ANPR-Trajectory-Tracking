@@ -106,7 +106,12 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
           </button>
 
           {/* Notifications Button */}
-          <button style={{ position: "relative", width: "36px", height: "36px", borderRadius: "50%", background: "var(--void)", border: "1px solid var(--rule)", display: "flex", alignItems: "center", justifyContent: "center" }} aria-label="Notifications" className="header-icon-btn">
+          <button 
+            onClick={() => navigate('/violations')}
+            style={{ position: "relative", width: "36px", height: "36px", borderRadius: "50%", background: "var(--void)", border: "1px solid var(--rule)", display: "flex", alignItems: "center", justifyContent: "center" }} 
+            aria-label="Notifications" 
+            className="header-icon-btn"
+          >
             <svg viewBox="0 0 24 24" style={{ width: "18px", height: "18px", fill: "var(--ink-dim)" }}>
               <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
             </svg>
