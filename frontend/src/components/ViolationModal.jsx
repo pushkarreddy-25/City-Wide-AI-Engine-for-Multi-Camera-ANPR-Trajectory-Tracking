@@ -49,10 +49,87 @@ export function ViolationModal({ violation, onClose, onResolved }) {
             <dt>Status</dt><dd>{v.resolved ? <span className="resolved-tag">✓ Resolved</span> : "Open"}</dd>
           </dl>
 
-          <div className="evidence">
+          <div className="evidence" style={{ overflow: "hidden", position: "relative" }}>
             {evidence
               ? <img src={evidence} alt="Violation evidence frame" />
-              : <span>◎ Evidence frame captured at detection<br />(image pipeline stub in simulation mode)</span>}
+              : (
+                <div className="simulated-preview" style={{ 
+                  width: "100%", height: "200px", 
+                  background: "#050b14", 
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid var(--rule)",
+                  borderRadius: "6px"
+                }}>
+                  {/* Grid background */}
+                  <div style={{ position: "absolute", inset: 0, opacity: 0.1, backgroundImage: "linear-gradient(#0066cc 1px, transparent 1px), linear-gradient(90deg, #0066cc 1px, transparent 1px)", backgroundSize: "20px 20px" }}></div>
+                  
+                  {/* Vehicle Shape */}
+                  <div style={{
+                    width: "120px", height: "80px",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "2px solid rgba(255,255,255,0.2)",
+                    borderRadius: "10px 10px 4px 4px",
+                    position: "relative",
+                    marginTop: "20px"
+                  }}>
+                    {/* License Plate Box */}
+                    <div style={{
+                      position: "absolute",
+                      bottom: "10px", left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "60px", height: "20px",
+                      background: "#fff",
+                      border: "2px solid #ccc",
+                      borderRadius: "2px",
+                      display: "flex", alignItems: "center", justifyContent: "center"
+                    }}>
+                      <span className="mono" style={{ color: "#000", fontSize: "10px", fontWeight: "bold" }}>{v.plate}</span>
+                    </div>
+                  </div>
+
+                  {/* ANPR Tracking Box (animated) */}
+                  <div className="tracking-box" style={{
+                    position: "absolute",
+                    bottom: "20px", left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "70px", height: "30px",
+                    border: "2px solid #00ff00",
+                    boxShadow: "0 0 10px #00ff00",
+                    animation: "pulse-box 2s infinite"
+                  }}>
+                    {/* Scanning Laser */}
+                    <div style={{
+                      width: "100%", height: "2px",
+                      background: "#00ff00",
+                      boxShadow: "0 0 8px #00ff00",
+                      animation: "scan-laser 1.5s linear infinite"
+                    }}></div>
+                  </div>
+                  
+                  <div style={{ position: "absolute", top: "10px", left: "10px", color: "#00ff00", fontSize: "10px", fontFamily: "monospace", textShadow: "0 0 4px #00ff00" }}>
+                    REC • ANPR ACTIVE
+                  </div>
+                  <div style={{ position: "absolute", top: "10px", right: "10px", color: "rgba(255,255,255,0.5)", fontSize: "10px", fontFamily: "monospace" }}>
+                    SIMULATION MODE
+                  </div>
+                  
+                  <style>{`
+                    @keyframes pulse-box {
+                      0% { transform: translateX(-50%) scale(1.1); opacity: 0.5; border-color: #ffb020; }
+                      50% { transform: translateX(-50%) scale(1); opacity: 1; border-color: #00ff00; }
+                      100% { transform: translateX(-50%) scale(1.1); opacity: 0.5; border-color: #ffb020; }
+                    }
+                    @keyframes scan-laser {
+                      0% { transform: translateY(0); }
+                      50% { transform: translateY(26px); }
+                      100% { transform: translateY(0); }
+                    }
+                  `}</style>
+                </div>
+              )}
           </div>
 
           {v.resolved ? (
