@@ -67,7 +67,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-anpr}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-anpr_traffic}
       CACHE_BACKEND: redis
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-      SIM_ENABLED: "1"
+      SIM_ENABLED: "0"
       SIM_SEED: "42"
       # Production-safe default: writes stay disabled until an operator
       # explicitly opts in with ANPR_READ_ONLY=0 and supplies ANPR_API_KEY.
