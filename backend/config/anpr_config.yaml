@@ -1,31 +1,34 @@
-# ANPR pipeline configuration.
-#
-# `engine: mock`  -> runs anywhere, no GPU. Synthetic detections/plates.
-# `engine: yolo`  -> real YOLOv8 (requires `ultralytics` + weights + GPU/CPU).
-# `engine: easyocr` -> real EasyOCR (requires `easyocr` + torch).
-# `engine: paddleocr` -> real PaddleOCR (requires `paddleocr`).
-#
-# Switching an engine to its real value is the ONLY change needed to move from
-# simulation to production inference (see backend/anpr_module/*).
-
-detection:
-  engine: yolo                # mock | yolo
-  model_path: "yolov8s.pt"
-  confidence_threshold: 0.5
-  device: "cpu"               # cpu | cuda
-  classes: ["Car", "SUV", "Truck", "Motorcycle", "Auto", "Bus"]
-
-ocr:
-  engine: easyocr             # mock | easyocr | paddleocr
-  languages: ["en", "hi"]
-  confidence_threshold: 0.70  # below this, plate not used for violations
-  tracking_threshold: 0.50    # below this, plate not used even for tracking
-
 attributes:
-  engine: histogram           # mock | histogram
-  colors: ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green", "Other"]
-
+  colors:
+  - White
+  - Black
+  - Silver
+  - Blue
+  - Red
+  - Yellow
+  - Green
+  - Other
+  engine: histogram
+detection:
+  classes:
+  - Car
+  - SUV
+  - Truck
+  - Motorcycle
+  - Auto
+  - Bus
+  confidence_threshold: 0.5
+  device: cpu
+  engine: yolo
+  model_path: yolov8s.pt
+ocr:
+  confidence_threshold: 0.7
+  engine: easyocr
+  languages:
+  - en
+  - hi
+  tracking_threshold: 0.5
 processing:
-  target_fps: 2
-  max_batch_size: 8
   frame_skip: 1
+  max_batch_size: 8
+  target_fps: 2

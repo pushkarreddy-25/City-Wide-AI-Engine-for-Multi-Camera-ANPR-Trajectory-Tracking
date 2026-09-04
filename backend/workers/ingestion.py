@@ -51,7 +51,7 @@ class CameraIngestionWorker:
                     cap = cv2.VideoCapture(video_path)
                     
                 # Read frame if queue is relatively empty (backpressure control)
-                if self.queue.qsize() < 3:
+                if self.queue._queue.qsize() < 3:
                     ret, frame = cap.read()
                     if not ret:
                         # Loop video
@@ -60,7 +60,9 @@ class CameraIngestionWorker:
                         
                     if ret:
                         # Use first available camera for demo
-                        cam_id = list(config.get("cameras", {"cam_mg_road": 1}).keys())[0]
+                        from utils.config import cameras as get_cameras
+                        cams = get_cameras()
+                        cam_id = list(cams.keys())[0] if cams else "cam_1"
                         self.emit_frame(cam_id, frame, timestamp=datetime.now())
                         
                 # Yield CPU to allow YOLO processing to catch up (simulate ~3 FPS)

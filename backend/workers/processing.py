@@ -32,6 +32,7 @@ class ProcessingWorker:
             self._thread.join(timeout=1)
 
     def _run(self):
+        import traceback
         while not self._stop.is_set():
             job = self.queue.get(timeout=0.25)
             if job is None:
@@ -57,6 +58,9 @@ class ProcessingWorker:
                     "detections": dets,
                     "alerts": alerts,
                 })
+            except Exception as e:
+                print(f"Error in ProcessingWorker processing frame: {e}")
+                traceback.print_exc()
             finally:
                 self.queue.task_done()
             time.sleep(0.01)

@@ -1,144 +1,89 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
-// A high-tech background grid effect
-const GridBackground = () => (
-  <div style={{ position: "absolute", inset: 0, opacity: 0.15, pointerEvents: "none", overflow: "hidden" }}>
-    <div style={{
-      position: "absolute",
-      inset: -50,
-      backgroundSize: "40px 40px",
-      backgroundImage: `
-        linear-gradient(to right, rgba(0, 102, 204, 0.4) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(0, 102, 204, 0.4) 1px, transparent 1px)
-      `,
-      maskImage: "radial-gradient(circle at center, black 20%, transparent 80%)",
-      WebkitMaskImage: "radial-gradient(circle at center, black 20%, transparent 80%)",
-      transform: "perspective(500px) rotateX(45deg) scale(1.5)",
-      transformOrigin: "center 80%"
-    }} />
-  </div>
-);
-
 export function StartupSequence({ state }) {
-  // state is "loading" (0-2.5s) or "welcome" (2.5-5.0s)
-  
-  // Cycle through high-tech loading phases
-  const [loadText, setLoadText] = useState("Initializing Core Systems");
-  
+  const [loadProgress, setLoadProgress] = useState(0);
+
   useEffect(() => {
     if (state !== "loading") return;
-    const t1 = setTimeout(() => setLoadText("Connecting to Traffic Grid..."), 700);
-    const t2 = setTimeout(() => setLoadText("Calibrating ANPR Engines..."), 1400);
-    const t3 = setTimeout(() => setLoadText("Establishing Secure Uplink..."), 2100);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    let val = 0;
+    const interval = setInterval(() => {
+      val += Math.random() * 2 + 1;
+      if (val >= 100) {
+        val = 100;
+        clearInterval(interval);
+      }
+      setLoadProgress(val);
+    }, 40);
+    return () => clearInterval(interval);
   }, [state]);
 
-  const welcomeText = "TrafficPulse AI";
-  const letters = Array.from(welcomeText);
+  const title = "TRAFFIC PULSE";
+  const letters = Array.from(title);
 
   return (
     <div className="startup-overlay" style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: "radial-gradient(circle at center, #0a1118 0%, #03060a 100%)", // deeper premium dark background
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 9999,
-      overflow: "hidden"
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "#000000", display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 9999, overflow: "hidden", fontFamily: "'Inter', sans-serif"
     }}>
-      <GridBackground />
       
+      {/* Ambient Deep Background Glow */}
+      <motion.div
+        animate={{ opacity: [0.3, 0.5, 0.3], scale: [1, 1.1, 1] }}
+        transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
+        style={{
+          position: "absolute",
+          width: "150vw", height: "150vh",
+          background: "radial-gradient(circle at center, rgba(14, 165, 233, 0.05) 0%, transparent 60%)",
+          pointerEvents: "none"
+        }}
+      />
+
       <AnimatePresence mode="wait">
         {state === "loading" && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(12px)" }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "32px", position: "relative" }}
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }} transition={{ duration: 0.8, ease: "easeInOut" }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 10 }}
           >
-            {/* Advanced Radar / Pulse Animation */}
-            <div style={{ position: "relative", width: "160px", height: "160px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              
-              {/* Outer rotating scanner ring */}
+            {/* Cinematic Glowing Orb */}
+            <div style={{ position: "relative", width: "200px", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 3, ease: "linear", repeat: Infinity }}
+                animate={{ rotate: 360, scale: [1, 1.05, 1] }}
+                transition={{ rotate: { duration: 8, ease: "linear", repeat: Infinity }, scale: { duration: 3, ease: "easeInOut", repeat: Infinity } }}
                 style={{
-                  position: "absolute",
-                  width: "140px",
-                  height: "140px",
-                  border: "1px dashed rgba(0, 102, 204, 0.4)",
+                  position: "absolute", inset: 0,
                   borderRadius: "50%",
+                  background: "conic-gradient(from 180deg at 50% 50%, rgba(14, 165, 233, 0) 0%, rgba(14, 165, 233, 0.8) 50%, rgba(14, 165, 233, 0) 100%)",
+                  filter: "blur(8px)",
+                  opacity: 0.8
                 }}
               />
-
-              {/* Pulsing rings */}
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  animate={{ 
-                    scale: [1, 2, 2.5],
-                    opacity: [0.8, 0.2, 0],
-                    borderWidth: ["2px", "1px", "0px"]
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    ease: "cubicBezier(0.1, 0.7, 1.0, 0.1)",
-                    repeat: Infinity,
-                    delay: i * 0.8
-                  }}
-                  style={{
-                    position: "absolute",
-                    width: "48px",
-                    height: "48px",
-                    borderStyle: "solid",
-                    borderColor: "#0066cc",
-                    borderRadius: "50%",
-                  }}
-                />
-              ))}
-
-              {/* Core glowing orb */}
-              <motion.div 
-                animate={{ scale: [1, 1.1, 1], boxShadow: ["0 0 20px #0066cc", "0 0 40px #38bdf8", "0 0 20px #0066cc"] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              <motion.div
+                animate={{ rotate: -360 }}
+                transition={{ duration: 12, ease: "linear", repeat: Infinity }}
                 style={{
-                  width: "28px",
-                  height: "28px",
-                  background: "linear-gradient(135deg, #38bdf8, #0066cc)",
+                  position: "absolute", inset: 20,
                   borderRadius: "50%",
-                  zIndex: 10
-                }} 
+                  background: "conic-gradient(from 0deg at 50% 50%, rgba(56, 189, 248, 0) 0%, rgba(224, 242, 254, 0.5) 50%, rgba(56, 189, 248, 0) 100%)",
+                  filter: "blur(4px)",
+                }}
               />
+              {/* Inner dark core */}
+              <div style={{
+                position: "absolute", inset: 35,
+                borderRadius: "50%", background: "#000000",
+                boxShadow: "inset 0 0 20px rgba(14, 165, 233, 0.5)"
+              }} />
             </div>
-            
-            {/* Dynamic loading text */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", height: "40px" }}>
-              <AnimatePresence mode="wait">
-                <motion.h2
-                  key={loadText}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="mono"
-                  style={{ fontSize: "14px", color: "var(--cyan-soft)", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: "600", textShadow: "0 0 10px rgba(0,102,204,0.5)" }}
-                >
-                  {loadText}
-                </motion.h2>
-              </AnimatePresence>
 
-              {/* Processing bar */}
-              <div style={{ width: "120px", height: "2px", background: "rgba(0,102,204,0.2)", borderRadius: "2px", overflow: "hidden", position: "relative" }}>
+            {/* Premium minimal loading text */}
+            <div style={{ marginTop: "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "12px", letterSpacing: "8px", color: "rgba(255,255,255,0.6)", textTransform: "uppercase", fontWeight: 400 }}>
+                Initializing Engine
+              </span>
+              <div style={{ width: "160px", height: "1px", background: "rgba(255,255,255,0.1)", position: "relative", overflow: "hidden" }}>
                 <motion.div
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "100%" }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
-                  style={{ position: "absolute", top: 0, bottom: 0, width: "50%", background: "var(--cyan-soft)", boxShadow: "0 0 10px var(--cyan)" }}
+                  style={{ height: "100%", background: "#38bdf8", width: `${loadProgress}%`, boxShadow: "0 0 10px #38bdf8" }}
                 />
               </div>
             </div>
@@ -146,54 +91,45 @@ export function StartupSequence({ state }) {
         )}
 
         {state === "welcome" && (
-          <motion.div
-            key="welcome"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
+          <motion.div key="welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.05, filter: "blur(15px)" }} transition={{ duration: 1.2, ease: "easeInOut" }}
+            style={{ textAlign: "center", zIndex: 20 }}
           >
-            <div style={{ display: "flex", overflow: "hidden", padding: "10px 0" }}>
+            {/* Cinematic Logo Reveal */}
+            <div style={{ display: "flex", overflow: "hidden", padding: "20px" }}>
               {letters.map((letter, index) => (
                 <motion.span
                   key={index}
-                  initial={{ opacity: 0, y: 40, rotateX: -90 }}
-                  animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                  initial={{ opacity: 0, filter: "blur(20px)", scale: 1.2 }}
+                  animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
                   transition={{
-                    duration: 0.7,
-                    delay: index * 0.05,
-                    type: "spring",
-                    stiffness: 150,
-                    damping: 12
+                    duration: 1.2,
+                    delay: index * 0.05 + 0.2,
+                    ease: [0.16, 1, 0.3, 1]
                   }}
                   style={{ 
                     display: "inline-block",
-                    fontSize: "56px", 
-                    fontWeight: "800", 
-                    background: "linear-gradient(135deg, #ffffff 0%, #a5f3fc 50%, #0066cc 100%)",
-                    WebkitBackgroundClip: "text", 
-                    WebkitTextFillColor: "transparent",
-                    letterSpacing: "-0.03em",
-                    textShadow: "0 10px 30px rgba(0,102,204,0.3)"
+                    fontSize: "72px", 
+                    fontWeight: "300", // Sleeker, thinner premium font look
+                    color: "#ffffff",
+                    letterSpacing: "4px",
+                    marginRight: letter === " " ? "24px" : "4px",
+                    textShadow: "0 0 30px rgba(255,255,255,0.3)"
                   }}
                 >
-                  {letter === " " ? "\u00A0" : letter}
+                  {letter}
                 </motion.span>
               ))}
             </div>
             
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
-              style={{ display: "flex", alignItems: "center", gap: "12px" }}
+              initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ delay: 1.2, duration: 1.5, ease: "easeOut" }}
+              style={{ marginTop: "10px" }}
             >
-              <div style={{ width: "30px", height: "1px", background: "linear-gradient(90deg, transparent, var(--cyan))" }} />
-              <p className="mono" style={{ fontSize: "14px", color: "var(--cyan-dim)", letterSpacing: "0.25em", textTransform: "uppercase" }}>
-                City-Wide Intelligence Engine
-              </p>
-              <div style={{ width: "30px", height: "1px", background: "linear-gradient(-90deg, transparent, var(--cyan))" }} />
+              <span style={{ fontSize: "12px", color: "rgba(14, 165, 233, 0.8)", letterSpacing: "12px", textTransform: "uppercase", fontWeight: "500" }}>
+                AI Vision Platform
+              </span>
             </motion.div>
           </motion.div>
         )}

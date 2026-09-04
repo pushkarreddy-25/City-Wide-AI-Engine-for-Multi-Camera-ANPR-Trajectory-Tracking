@@ -61,6 +61,14 @@ class ANPREngine:
         violation checks and linking-accuracy evaluation. In real mode ``_source``
         is simply the raw detector output.
         """
+        # Protect against cross-mode queue pollution: drop frames meant for the other engine type.
+        is_mock = self.detector.__class__.__name__ == "MockDetector"
+        # Mock frames are lists of dicts. YOLO frames are numpy arrays.
+        if is_mock and not isinstance(frame, list):
+            return []
+        if not is_mock and isinstance(frame, list):
+            return []
+            
         results = []
         for det, plate, plate_conf, color in self._iter_results(frame):
             results.append({
