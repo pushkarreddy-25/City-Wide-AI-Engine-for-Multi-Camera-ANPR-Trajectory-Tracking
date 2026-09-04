@@ -20,7 +20,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from api import security
-from api.routers import analytics, cameras, vehicles, violations, ws
+from api.routers import analytics, cameras, vehicles, violations, ws, system
 from db.init_db import init_db
 from services.runtime_service import runtime_services
 from simulation import TrafficSimulator
@@ -57,7 +57,7 @@ def create_app() -> FastAPI:
     app.add_middleware(security.RateLimitMiddleware)
     app.add_middleware(security.SecurityHeadersMiddleware)
 
-    for module in (cameras, vehicles, violations, analytics, ws):
+    for module in (cameras, vehicles, violations, analytics, ws, system):
         app.include_router(module.router)
 
     @app.get("/health", tags=["system"], summary="Health check")

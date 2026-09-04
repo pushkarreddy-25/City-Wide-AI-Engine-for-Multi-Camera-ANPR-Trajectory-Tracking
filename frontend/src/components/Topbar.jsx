@@ -8,6 +8,38 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
   const navigate = useNavigate();
   const [searchVal, setSearchVal] = useState("");
   const [localTime, setLocalTime] = useState("");
+  const [sysMode, setSysMode] = useState("simulation");
+  const [modeLoading, setModeLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/system/mode")
+      .then(r => r.json())
+      .then(d => setSysMode(d.mode || "simulation"))
+      .catch(console.error);
+  }, []);
+
+  const toggleMode = async () => {
+    if (modeLoading) return;
+    const newMode = sysMode === "simulation" ? "production" : "simulation";
+    setModeLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/system/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: newMode })
+      });
+      const data = await res.json();
+      if (data.status === "ok") {
+        setSysMode(data.mode);
+        // Dispatch custom event to notify other components to refresh or reset
+        window.dispatchEvent(new Event("systemModeChanged"));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setModeLoading(false);
+    }
+  };
 
   // Clock updating local time in a premium HH:MM:SS format
   useEffect(() => {
@@ -86,6 +118,27 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
             <span className="conn-dot" style={{ width: "6px", height: "6px", borderRadius: "50%", background: status === "live" ? "var(--green)" : "var(--amber)" }} />
             <span style={{ color: "var(--ink-dim)" }}>{STATUS_LABEL[status] || status}</span>
           </div>
+
+          {/* Mode Toggle Button */}
+          <button 
+            onClick={toggleMode}
+            disabled={modeLoading}
+            style={{ 
+              display: "flex", alignItems: "center", gap: "6px",
+              padding: "4px 10px", 
+              borderRadius: "6px", 
+              background: modeLoading ? "var(--void)" : (sysMode === "simulation" ? "rgba(255,176,32,0.1)" : "rgba(0,255,0,0.1)"), 
+              border: `1px solid ${sysMode === "simulation" ? "var(--amber)" : "var(--green)"}`, 
+              fontSize: "10.5px", fontWeight: "700", 
+              color: sysMode === "simulation" ? "var(--amber)" : "var(--green)",
+              cursor: modeLoading ? "wait" : "pointer",
+              transition: "all 0.2s"
+            }}
+            title={sysMode === "simulation" ? "Switch to Real AI Inference" : "Switch to Fake Traffic Simulation"}
+          >
+            <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: sysMode === "simulation" ? "var(--amber)" : "var(--green)", animation: modeLoading ? "pulse 1s infinite" : "none" }}></div>
+            {modeLoading ? "SWITCHING..." : sysMode.toUpperCase()}
+          </button>
 
           {/* Theme Toggle Button */}
           <button 
