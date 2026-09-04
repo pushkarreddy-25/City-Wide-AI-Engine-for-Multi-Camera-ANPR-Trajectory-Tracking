@@ -37,7 +37,7 @@ def set_mode(payload: ModeUpdate):
         cfg.setdefault("attributes", {})["engine"] = "mock"
     else:
         cfg.setdefault("detection", {})["engine"] = "yolo"
-        cfg.setdefault("ocr", {})["engine"] = "paddleocr"
+        cfg.setdefault("ocr", {})["engine"] = "easyocr"
         cfg.setdefault("attributes", {})["engine"] = "histogram"
         
     with open(config_path, "w") as f:
