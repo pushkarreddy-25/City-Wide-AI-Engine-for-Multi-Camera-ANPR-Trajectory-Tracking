@@ -11,6 +11,9 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
   const [localTime, setLocalTime] = useState("");
   const [sysMode, setSysMode] = useState("simulation");
   const [modeLoading, setModeLoading] = useState(false);
+  const [cameraConnected, setCameraConnected] = useState(
+    localStorage.getItem("cameraConnected") === "true"
+  );
 
   useEffect(() => {
     fetch(apiUrl("/system/mode"))
@@ -22,6 +25,13 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
   const toggleMode = async () => {
     if (modeLoading) return;
     const newMode = sysMode === "simulation" ? "production" : "simulation";
+    
+    // Enforce camera connection requirement before switching to actual system
+    if (newMode === "production" && !cameraConnected) {
+      alert("No active camera feed detected! Please connect a camera feed before switching to the actual live system.");
+      return;
+    }
+    
     setModeLoading(true);
     try {
       const res = await fetch(apiUrl("/system/mode"), {
@@ -119,6 +129,32 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
             <span className="conn-dot" style={{ width: "6px", height: "6px", borderRadius: "50%", background: status === "live" ? "var(--green)" : "var(--amber)" }} />
             <span style={{ color: "var(--ink-dim)" }}>{STATUS_LABEL[status] || status}</span>
           </div>
+
+          {/* Fake Camera Connection Toggle for Demo Purposes */}
+          <button
+            onClick={() => {
+              const newState = !cameraConnected;
+              setCameraConnected(newState);
+              localStorage.setItem("cameraConnected", newState.toString());
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              padding: "4px 10px", 
+              borderRadius: "6px", 
+              background: "var(--void)", 
+              border: `1px solid ${cameraConnected ? "var(--green)" : "var(--rule)"}`, 
+              fontSize: "10.5px", fontWeight: "700", 
+              color: cameraConnected ? "var(--green)" : "var(--ink-dim)",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+            title="Connect / Disconnect Camera Feed"
+          >
+            <svg viewBox="0 0 24 24" style={{ width: "12px", height: "12px", fill: "currentColor" }}>
+              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+            </svg>
+            {cameraConnected ? "CAMERA CONNECTED" : "CONNECT CAMERA"}
+          </button>
 
           {/* Mode Toggle Button */}
           <button 
