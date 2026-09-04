@@ -61,6 +61,8 @@ def set_mode(payload: ModeUpdate):
     # Start or stop simulator
     if mode == "simulation":
         if hasattr(main_app, 'simulator') and main_app.simulator is not None:
+            if hasattr(main_app.simulator, 'pipeline'):
+                main_app.simulator.pipeline.engine = new_engine
             main_app.simulator.start()
     else:
         if hasattr(main_app, 'simulator') and main_app.simulator is not None:

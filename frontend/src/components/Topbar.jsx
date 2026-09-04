@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { fmtTime } from "../services/format.js";
+import { apiUrl } from "../services/api.js";
 
 const STATUS_LABEL = { live: "Live", connecting: "Connecting", down: "Reconnecting" };
 
@@ -12,7 +13,7 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
   const [modeLoading, setModeLoading] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:8000/system/mode")
+    fetch(apiUrl("/system/mode"))
       .then(r => r.json())
       .then(d => setSysMode(d.mode || "simulation"))
       .catch(console.error);
@@ -23,7 +24,7 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
     const newMode = sysMode === "simulation" ? "production" : "simulation";
     setModeLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/system/mode", {
+      const res = await fetch(apiUrl("/system/mode"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: newMode })
