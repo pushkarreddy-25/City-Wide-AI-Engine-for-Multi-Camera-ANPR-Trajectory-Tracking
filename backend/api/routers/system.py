@@ -53,10 +53,10 @@ def set_mode(payload: ModeUpdate):
     importlib.reload(anpr_module.engine)
     
     # Reload runtime services pipeline
-    if hasattr(runtime_services, 'pipeline'):
-        # Just creating a new engine loads the new config from file
-        new_engine = anpr_module.engine.ANPREngine()
-        runtime_services.pipeline.engine = new_engine
+    new_engine = anpr_module.engine.ANPREngine()
+    
+    if hasattr(runtime_services, 'processing_worker') and hasattr(runtime_services.processing_worker, 'pipeline'):
+        runtime_services.processing_worker.pipeline.engine = new_engine
         
     # Start or stop simulator
     if mode == "simulation":
