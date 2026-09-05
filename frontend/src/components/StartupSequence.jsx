@@ -52,9 +52,40 @@ const stages = [
 export function StartupSequence({ state }) {
   const [stage, setStage] = useState(0);
   const [plateText, setPlateText] = useState("");
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
+  // Preload images before starting animation to prevent pop-in
   useEffect(() => {
-    if (state !== "loading") return;
+    if (state !== "loading") {
+      setImagesPreloaded(false);
+      return;
+    }
+
+    const imagesToPreload = [
+      "/camera_bg_1788597605901.jpg",
+      "/road_bg_1788597861335.jpg",
+      "/car_approach_1788597874628.jpg",
+      "/car_plate_zoom_1788597919881.jpg",
+      "/plate_extreme_zoom_1788598033735.jpg",
+      "/network_bg_1788598174786.jpg"
+    ];
+
+    let loadedCount = 0;
+    imagesToPreload.forEach(src => {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        loadedCount++;
+        if (loadedCount === imagesToPreload.length) {
+          setImagesPreloaded(true);
+        }
+      };
+      img.src = src;
+    });
+  }, [state]);
+
+  // Stage progression timer (waits for preloading)
+  useEffect(() => {
+    if (state !== "loading" || !imagesPreloaded) return;
 
     setStage(0);
     setPlateText("");
@@ -75,11 +106,11 @@ export function StartupSequence({ state }) {
     nextStage();
 
     return () => clearTimeout(timer);
-  }, [state]);
+  }, [state, imagesPreloaded]);
 
   // OCR character-by-character reveal
   useEffect(() => {
-    if (stage !== 5) {
+    if (stage !== 5 || !imagesPreloaded) {
       setPlateText("");
       return;
     }
@@ -136,13 +167,19 @@ export function StartupSequence({ state }) {
               MAIN CINEMATIC SCENE
           ================================================= */}
 
+          {!imagesPreloaded && state === "loading" && (
+             <div style={{...styles.scene, background: "#000", zIndex: 100, color: TEAL, fontFamily: "monospace", fontSize: 10, letterSpacing: 3}}>
+                BUFFERING VISUALS...
+             </div>
+          )}
+
           {/* Removed mode="wait" so stages crossfade smoothly without a black flash */}
           <AnimatePresence>
 
             {/* -----------------------------------------------
                 STAGE 0 — CAMERA ACTIVATION
             ------------------------------------------------ */}
-            {stage === 0 && (
+            {stage === 0 && imagesPreloaded && (
               <motion.div
                 key="camera"
                 initial={{ opacity: 0 }}

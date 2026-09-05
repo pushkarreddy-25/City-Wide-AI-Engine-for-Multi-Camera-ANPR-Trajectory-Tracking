@@ -88,7 +88,9 @@ class YOLODetector(BaseDetector):
         self.device = device
 
     def detect(self, frame) -> List[dict]:
-        results = self.model(frame, verbose=False, device=self.device)
+        # Optimize inference by reducing resolution and enabling half precision on GPU
+        half = self.device != "cpu"
+        results = self.model(frame, verbose=False, device=self.device, imgsz=480, half=half)
         detections = []
         for r in results:
             for box in r.boxes:

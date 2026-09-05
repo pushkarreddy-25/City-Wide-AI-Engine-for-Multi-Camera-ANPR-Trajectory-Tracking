@@ -73,7 +73,8 @@ class EasyOCROCR(BaseOCR):
 
     def __init__(self, languages=("en",), confidence_threshold: float = 0.7):
         import easyocr  # noqa: heavy optional dependency
-        self.reader = easyocr.Reader(list(languages))
+        # Explicitly enable GPU. EasyOCR will fallback to CPU if CUDA is unavailable.
+        self.reader = easyocr.Reader(list(languages), gpu=True)
         self.confidence_threshold = confidence_threshold
 
     def read(self, frame, detection: dict) -> Tuple[str, float]:

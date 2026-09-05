@@ -13,6 +13,8 @@ in :mod:`api.security` — see that module for the environment variables that
 tune it. The defaults are safe with no configuration at all.
 """
 import os
+import asyncio
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -66,6 +68,23 @@ def create_app() -> FastAPI:
         return {"status": "ok", "simulator_running": running,
                 "history_seeded": bool(simulator and simulator.seeded),
                 **security.public_config()}
+
+    @app.on_event("startup")
+    async def _start_health_logger():
+        logger = logging.getLogger("health_monitor")
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            logger.addHandler(ch)
+
+        async def periodic_logger():
+            while True:
+                await asyncio.sleep(5)
+                status = health()
+                logger.info(f"System Health: {status}")
+                
+        asyncio.create_task(periodic_logger())
 
     @app.on_event("startup")
     def _startup():
