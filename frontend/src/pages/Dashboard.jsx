@@ -270,7 +270,13 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
 
               {selectedJourney ? (
                 <>
-                  <VehicleSVG color={selectedJourney.color || "White"} />
+                  {selectedJourney.image_base64 ? (
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid var(--rule)", marginBottom: "12px", minHeight: "84px" }}>
+                      <img src={`data:image/jpeg;base64,${selectedJourney.image_base64}`} alt="Vehicle crop" style={{ maxWidth: "100%", maxHeight: "120px", borderRadius: "4px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
+                    </div>
+                  ) : (
+                    <VehicleSVG color={selectedJourney.color || "White"} />
+                  )}
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
@@ -334,7 +340,13 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
 
               {latestDetection ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <VehicleSVG color={latestDetection.vehicle_color || latestDetection.color || "White"} />
+                  {latestDetection.image_base64 ? (
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid #00ffaa", boxShadow: "0 0 15px rgba(0, 255, 170, 0.4)", marginBottom: "12px", minHeight: "84px" }}>
+                      <img src={`data:image/jpeg;base64,${latestDetection.image_base64}`} alt="Vehicle crop" style={{ maxWidth: "100%", maxHeight: "120px", borderRadius: "4px" }} />
+                    </div>
+                  ) : (
+                    <VehicleSVG color={latestDetection.vehicle_color || latestDetection.color || "White"} />
+                  )}
                   
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
                     <span style={{ fontSize: "12px", color: "var(--ink-dim)" }}>Detected License Plate</span>

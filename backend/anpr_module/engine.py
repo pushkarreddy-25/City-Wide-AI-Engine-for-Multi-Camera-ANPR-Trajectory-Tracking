@@ -71,7 +71,7 @@ class ANPREngine:
             
         results = []
         for det, plate, plate_conf, color in self._iter_results(frame):
-            results.append({
+            res = {
                 "bbox": tuple(det["bbox"]),
                 "vehicle_confidence": det.get("confidence"),
                 "vehicle_type": det.get("vehicle_type", "Car"),
@@ -81,7 +81,18 @@ class ANPREngine:
                 "valid_plate": is_valid_plate(plate),
                 "speed_kmh": det.get("speed_kmh"),
                 "_source": det,
-            })
+            }
+            if not is_mock:
+                import cv2
+                import base64
+                x1, y1, x2, y2 = map(int, det["bbox"])
+                h, w = frame.shape[:2]
+                x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+                crop = frame[y1:y2, x1:x2]
+                if crop.size > 0:
+                    _, buffer = cv2.imencode('.jpg', crop)
+                    res["image_base64"] = base64.b64encode(buffer).decode('utf-8')
+            results.append(res)
         return results
 
     # -- component factories ------------------------------------------------

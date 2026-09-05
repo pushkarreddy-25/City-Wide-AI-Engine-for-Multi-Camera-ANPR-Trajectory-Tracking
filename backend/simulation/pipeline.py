@@ -55,6 +55,7 @@ class ProcessingPipeline:
                 "position": {"lat": cam.get("latitude"), "lng": cam.get("longitude")},
                 "_true_vehicle_id": gt.get("_vid"),
                 "_context": gt.get("context") or {},
+                "image_base64": r.get("image_base64"),
             })
 
         if track:
@@ -96,4 +97,5 @@ class ProcessingPipeline:
             "valid_plate": d["valid_plate"],
             "position": d["position"],
             "timestamp": _iso(d["timestamp"]),
+            "image_base64": d.get("image_base64"),
         }

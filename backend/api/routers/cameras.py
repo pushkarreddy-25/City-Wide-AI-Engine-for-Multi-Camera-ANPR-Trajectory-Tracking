@@ -65,9 +65,15 @@ def upload_video_endpoint(
         if not fps or fps <= 0:
             fps = 30.0
 
-        # Initialize ProcessingPipeline
+        # Initialize ProcessingPipeline with real YOLO engine
         pipeline = ProcessingPipeline(cameras=cams)
-        
+        from anpr_module.engine import ANPREngine
+        # Force real AI engines for uploaded videos regardless of current system mode
+        pipeline.engine = ANPREngine(config={
+            "detection": {"engine": "yolo", "model_path": "yolov8n.pt", "confidence_threshold": 0.5, "device": "cpu"},
+            "ocr": {"engine": "easyocr", "languages": ["en"], "confidence_threshold": 0.5},
+            "attributes": {"engine": "histogram"}
+        })
         all_detections = []
         all_violations = []
 

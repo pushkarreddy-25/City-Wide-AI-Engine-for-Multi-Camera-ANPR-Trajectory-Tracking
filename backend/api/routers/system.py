@@ -43,6 +43,12 @@ def set_mode(payload: ModeUpdate):
     with open(config_path, "w") as f:
         yaml.safe_dump(cfg, f)
         
+    from utils.config import load_yaml
+    load_yaml.cache_clear()
+    
+    from cache import get_cache
+    get_cache().clear()
+        
     # Apply to running instances
     # We rebuild the global pipeline with the new config
     import anpr_module.engine

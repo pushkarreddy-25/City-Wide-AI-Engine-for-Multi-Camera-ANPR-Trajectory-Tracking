@@ -39,7 +39,7 @@ canvas { display: block; }
   --mono:    "Share Tech Mono", ui-monospace, monospace;
   --r:      12px;
   --r-lg:   16px;
-  --rail-w: 240px;
+  --rail-w: 68px;
   --top-h:  64px;
   --gap:    16px;
   --label: 600 11px/1 var(--display);
@@ -218,6 +218,10 @@ body::before {
   background: var(--deck-3);
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
+  width: var(--rail-w);
+  overflow: hidden;
+  white-space: nowrap;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), z-index 0.3s;
 }
 
 .topbar {
@@ -270,6 +274,15 @@ body::before {
   line-height: 1.25;
   color: var(--ink-dim);
   min-width: 0;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s, max-width 0.2s;
+}
+.app-shell:has(.sidebar:hover) .brand-name,
+.app-shell:has(.brand:hover) .brand-name {
+  opacity: 1;
+  max-width: 150px;
 }
 .brand-name b { display: block; color: var(--ink); font-weight: 700; }
 .brand-sep { display: none; }
@@ -332,6 +345,28 @@ body::before {
   padding: 20px 12px;
   background: var(--deck-3);
   border-right: 1px solid var(--rule);
+  width: var(--rail-w);
+  overflow-x: hidden;
+  white-space: nowrap;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), z-index 0.3s;
+}
+
+.app-shell:has(.sidebar:hover) .sidebar,
+.app-shell:has(.brand:hover) .sidebar,
+.app-shell:has(.sidebar:hover) .brand,
+.app-shell:has(.brand:hover) .brand {
+  width: 210px;
+}
+.app-shell:has(.sidebar:hover) .sidebar,
+.app-shell:has(.brand:hover) .sidebar {
+  z-index: 4;
+  background: var(--void);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+}
+.app-shell:has(.sidebar:hover) .brand,
+.app-shell:has(.brand:hover) .brand {
+  z-index: 5;
+  background: var(--void);
 }
 
 .nav-item {
@@ -346,6 +381,8 @@ body::before {
   font-weight: 600;
   color: var(--ink-dim);
   transition: color .15s, background-color .15s, box-shadow .15s;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .nav-item::before {
   display: none; /* remove tick bar style */
@@ -364,6 +401,18 @@ body::before {
 
 .nav-ico { width: 16px; height: 16px; fill: currentColor; flex: none; opacity: .9; }
 
+.nav-item span {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s, max-width 0.2s;
+}
+.app-shell:has(.sidebar:hover) .nav-item span,
+.app-shell:has(.brand:hover) .nav-item span {
+  opacity: 1;
+  max-width: 150px;
+}
+
 .nav-badge {
   margin-left: auto;
   min-width: 20px;
@@ -375,11 +424,30 @@ body::before {
   font-size: 11px;
   font-style: normal;
   text-align: center;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s, max-width 0.2s;
+}
+.app-shell:has(.sidebar:hover) .nav-badge,
+.app-shell:has(.brand:hover) .nav-badge {
+  opacity: 1;
+  max-width: 30px;
 }
 
-.sidebar-foot { margin-top: auto; padding: 12px 12px 4px; border-top: 1px solid var(--rule); }
-
-/* -------------------------------------------------------------- content --- */
+.sidebar-foot {
+  margin-top: auto;
+  padding: 12px 12px 4px;
+  border-top: 1px solid var(--rule);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.app-shell:has(.sidebar:hover) .sidebar-foot,
+.app-shell:has(.brand:hover) .sidebar-foot {
+  opacity: 1;
+  pointer-events: auto;
+}/* -------------------------------------------------------------- content --- */
 .content {
   grid-area: content;
   position: relative;
@@ -526,29 +594,29 @@ body::before {
 /* ------------------------------------------------------ dashboard layout --- */
 .dash-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: var(--gap);
   flex: 1;
-  height: calc(100vh - 240px);
-  min-height: 540px;
+  height: calc(100vh - 200px);
+  min-height: 650px;
 }
 .panel-map {
   display: flex;
   flex-direction: column;
-  min-height: 520px;
+  min-height: 630px;
   height: 100%;
   overflow: hidden;
 }
 .panel-feed {
   display: flex;
   flex-direction: column;
-  min-height: 520px;
+  min-height: 630px;
   height: 100%;
 }
 .panel-feed .feed {
   flex: 1;
-  max-height: calc(100vh - 280px);
-  min-height: 460px;
+  max-height: calc(100vh - 240px);
+  min-height: 570px;
   overflow-y: auto;
 }
 
@@ -556,7 +624,7 @@ body::before {
   position: relative;
   flex: 1;
   width: 100%;
-  min-height: 480px;
+  min-height: 590px;
   height: 100%;
   background: #edf3f7;
   border-top: 1px solid var(--rule);

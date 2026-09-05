@@ -72,8 +72,13 @@ def create_app() -> FastAPI:
         global simulator
         init_db(reset=False, seed=True)
         runtime_services.start()
+        
+        # Check current config mode
+        from utils.config import get_anpr_config
+        is_production = get_anpr_config().get("detection", {}).get("engine") != "mock"
+        
         simulator = TrafficSimulator(seed=int(os.getenv("SIM_SEED", "42")))
-        if os.getenv("SIM_ENABLED", "1") != "0":
+        if os.getenv("SIM_ENABLED", "1") != "0" and not is_production:
             simulator.start()
 
     @app.on_event("shutdown")

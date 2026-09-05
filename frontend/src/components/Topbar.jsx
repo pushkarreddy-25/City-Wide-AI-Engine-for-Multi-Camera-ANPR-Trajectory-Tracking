@@ -26,12 +26,6 @@ export function Topbar({ status, stats, theme, toggleTheme }) {
     if (modeLoading) return;
     const newMode = sysMode === "simulation" ? "production" : "simulation";
     
-    // Enforce camera connection requirement before switching to actual system
-    if (newMode === "production" && !cameraConnected) {
-      alert("No active camera feed detected! Please connect a camera feed before switching to the actual live system.");
-      return;
-    }
-    
     setModeLoading(true);
     try {
       const res = await fetch(apiUrl("/system/mode"), {

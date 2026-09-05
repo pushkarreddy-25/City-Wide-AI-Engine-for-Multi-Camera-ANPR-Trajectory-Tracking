@@ -8,7 +8,7 @@ attributes:
   - Yellow
   - Green
   - Other
-  engine: mock
+  engine: histogram
 detection:
   classes:
   - Car
@@ -19,11 +19,11 @@ detection:
   - Bus
   confidence_threshold: 0.5
   device: cpu
-  engine: mock
+  engine: yolo
   model_path: yolov8s.pt
 ocr:
   confidence_threshold: 0.7
-  engine: mock
+  engine: easyocr
   languages:
   - en
   - hi
