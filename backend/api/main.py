@@ -79,10 +79,13 @@ def create_app() -> FastAPI:
             logger.addHandler(ch)
 
         async def periodic_logger():
+            last_status = None
             while True:
                 await asyncio.sleep(5)
                 status = health()
-                logger.info(f"System Health: {status}")
+                if status != last_status:
+                    logger.info(f"System Health Changed: {status}")
+                    last_status = status
                 
         asyncio.create_task(periodic_logger())
 

@@ -17,8 +17,19 @@ _is_sqlite = DATABASE_URL.startswith("sqlite")
 # A generous timeout + WAL journaling let the background simulator write while
 # API requests read, without "database is locked" errors.
 _connect_args = {"check_same_thread": False, "timeout": 30} if _is_sqlite else {}
+_pool_args = {} if _is_sqlite else {
+    "pool_size": 20,
+    "max_overflow": 10,
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+}
 
-engine = create_engine(DATABASE_URL, connect_args=_connect_args, future=True)
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args=_connect_args, 
+    future=True,
+    **_pool_args
+)
 
 
 if _is_sqlite:

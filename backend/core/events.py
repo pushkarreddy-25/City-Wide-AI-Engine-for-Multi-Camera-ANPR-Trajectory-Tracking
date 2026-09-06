@@ -25,8 +25,8 @@ class EventBus:
 class JobQueue:
     """Simple queue boundary between ingestion workers and processing workers."""
 
-    def __init__(self):
-        self._queue = queue.Queue()
+    def __init__(self, maxsize: int = 1000):
+        self._queue = queue.Queue(maxsize=maxsize)
 
     def put(self, job: Dict[str, Any]) -> None:
         self._queue.put(job)
