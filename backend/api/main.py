@@ -90,6 +90,23 @@ def create_app() -> FastAPI:
         asyncio.create_task(periodic_logger())
 
     @app.on_event("startup")
+    async def _start_keep_alive():
+        import urllib.request
+        
+        async def pinger():
+            keep_alive_url = os.getenv("KEEP_ALIVE_URL", "http://localhost:8000/health")
+            while True:
+                await asyncio.sleep(300)  # 5 minutes
+                try:
+                    req = urllib.request.Request(keep_alive_url, headers={'User-Agent': 'KeepAlive/1.0'})
+                    with urllib.request.urlopen(req, timeout=10):
+                        pass
+                except Exception as e:
+                    logging.getLogger("keep_alive").debug(f"Keep-alive ping failed: {e}")
+                    
+        asyncio.create_task(pinger())
+
+    @app.on_event("startup")
     def _startup():
         global simulator
         init_db(reset=False, seed=True)

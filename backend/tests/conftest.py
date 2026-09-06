@@ -24,6 +24,17 @@ os.environ.pop("ANPR_API_KEY", None)
 os.environ.pop("ANPR_READ_ONLY", None)
 
 import pytest  # noqa: E402
+import utils.config  # noqa: E402
+
+# Force mock engines in tests so that simulated ground-truth frames aren't rejected
+_orig_get_anpr_config = utils.config.get_anpr_config
+def _mocked_anpr_config():
+    cfg = _orig_get_anpr_config()
+    cfg.setdefault("detection", {})["engine"] = "mock"
+    cfg.setdefault("ocr", {})["engine"] = "mock"
+    cfg.setdefault("attributes", {})["engine"] = "mock"
+    return cfg
+utils.config.get_anpr_config = _mocked_anpr_config
 
 
 @pytest.fixture()

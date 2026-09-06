@@ -10,12 +10,12 @@
 #
 # For PDF export, a Redis cache, or PostgreSQL, see requirements-optional.txt.
 
-fastapi==0.110.0
-uvicorn[standard]==0.29.0
-pydantic==2.6.0
-SQLAlchemy==2.0.0
-PyYAML==6.0
-python-multipart==0.0.12
-opencv-python-headless==4.8.0.74
-ultralytics==8.0.0
-easyocr==1.7.0
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29        # [standard] bundles the websockets impl used by /ws
+pydantic>=2.6,<3.0
+SQLAlchemy>=2.0,<3.0
+PyYAML>=6.0
+python-multipart>=0.0.12
+opencv-python-headless>=4.8.0
+ultralytics>=8.0.0
+easyocr>=1.7.0
