@@ -12,3 +12,7 @@ redis>=5.0               # Redis cache backend    (set CACHE_BACKEND=redis, REDI
 
 psycopg2-binary>=2.9     # PostgreSQL driver       (set DATABASE_URL=postgresql+psycopg2://...)
                           #   without it, SQLite is used.
+
+opencv-python-headless>=4.8.0
+ultralytics>=8.0.0
+easyocr>=1.7.0
