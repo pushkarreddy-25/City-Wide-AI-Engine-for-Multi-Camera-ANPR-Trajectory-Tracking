@@ -22,34 +22,44 @@ class MockDetector(BaseDetector):
         # Handle real video frame matrices (numpy arrays) by generating simulated detections
         import numpy as np
         if isinstance(frame, np.ndarray) or (frame is not None and not isinstance(frame, list)):
-            if self.rng.random() < 0.12:  # 12% chance of detecting a vehicle in this frame
-                states = ["MH", "DL", "KA", "TN", "UP", "HR", "GJ"]
-                state = self.rng.choice(states)
-                district = f"{self.rng.randint(1, 99):02d}"
-                series = "".join(self.rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
-                num = f"{self.rng.randint(1, 9999):04d}"
-                random_plate = f"{state}-{district}-{series}-{num}"
-                
-                colors = ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green"]
-                random_color = self.rng.choice(colors)
+            if self.rng.random() < 0.90:  # 90% chance of detecting vehicle(s) in video frames
+                h, w = (frame.shape[0], frame.shape[1]) if hasattr(frame, "shape") and len(frame.shape) >= 2 else (720, 1280)
+                num_vehicles = 1 if self.rng.random() < 0.65 else 2
+                res_dets = []
+                for i in range(num_vehicles):
+                    states = ["MH", "DL", "KA", "TN", "UP", "HR", "GJ"]
+                    state = self.rng.choice(states)
+                    district = f"{self.rng.randint(1, 99):02d}"
+                    series = "".join(self.rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
+                    num = f"{self.rng.randint(1, 9999):04d}"
+                    random_plate = f"{state}-{district}-{series}-{num}"
+                    
+                    colors = ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green"]
+                    random_color = self.rng.choice(colors)
 
-                gt = {
-                    "bbox": (100, 200, 300, 400),
-                    "type": self.rng.choice(["Car", "Truck", "Bus", "Motorcycle"]),
-                    "speed_kmh": round(self.rng.uniform(35.0, 75.0), 1),
-                    "_vid": self.rng.randint(1000, 9999),
-                    "context": {},
-                    "plate": random_plate,
-                    "color": random_color,
-                    "obscured": False
-                }
-                return [{
-                    "bbox": gt["bbox"],
-                    "confidence": round(self.rng.uniform(0.85, 0.99), 3),
-                    "vehicle_type": gt["type"],
-                    "speed_kmh": gt["speed_kmh"],
-                    "_ground_truth": gt,
-                }]
+                    x1 = int(w * (0.15 + i * 0.4))
+                    y1 = int(h * 0.3)
+                    x2 = int(x1 + w * 0.3)
+                    y2 = int(y1 + h * 0.4)
+
+                    gt = {
+                        "bbox": (x1, y1, x2, y2),
+                        "type": self.rng.choice(["Car", "SUV", "Truck", "Bus", "Motorcycle"]),
+                        "speed_kmh": round(self.rng.uniform(42.0, 78.0), 1),
+                        "_vid": self.rng.randint(1000, 9999),
+                        "context": {},
+                        "plate": random_plate,
+                        "color": random_color,
+                        "obscured": False
+                    }
+                    res_dets.append({
+                        "bbox": gt["bbox"],
+                        "confidence": round(self.rng.uniform(0.88, 0.99), 3),
+                        "vehicle_type": gt["type"],
+                        "speed_kmh": gt["speed_kmh"],
+                        "_ground_truth": gt,
+                    })
+                return res_dets
             return []
 
         detections = []
