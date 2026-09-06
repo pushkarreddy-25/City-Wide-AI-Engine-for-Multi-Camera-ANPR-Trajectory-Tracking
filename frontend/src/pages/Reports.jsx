@@ -19,6 +19,17 @@ ChartJS.defaults.font.family = "'Space Grotesk', system-ui, sans-serif";
 ChartJS.defaults.font.size = 11;
 ChartJS.defaults.borderColor = GRID;
 
+/* Tooltip styling — dark background so it reads well on the dark console */
+ChartJS.defaults.plugins.tooltip.backgroundColor = "#0f1923";
+ChartJS.defaults.plugins.tooltip.titleColor = "#f8fafc";
+ChartJS.defaults.plugins.tooltip.bodyColor = "#cbd5e1";
+ChartJS.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.12)";
+ChartJS.defaults.plugins.tooltip.borderWidth = 1;
+ChartJS.defaults.plugins.tooltip.cornerRadius = 8;
+ChartJS.defaults.plugins.tooltip.padding = 10;
+ChartJS.defaults.plugins.tooltip.titleFont = { weight: "600", size: 12 };
+ChartJS.defaults.plugins.tooltip.bodyFont = { size: 11 };
+
 function Kpi({ label, value }) {
   return <div className="kpi"><div className="kpi-label">{label}</div><div className="kpi-val">{value}</div></div>;
 }

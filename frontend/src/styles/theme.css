@@ -2073,6 +2073,61 @@ input[type="date"] { font-family: var(--mono); }
   fill-opacity: 0.9 !important;
 }
 
+/* --------------------------------------- Leaflet popup dark-mode fix --- */
+/* Leaflet ships its own white popup styles. Override them so the popup
+   matches the console's dark / light theme instead of always being white. */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--void, #0b0f19) !important;
+  color: var(--ink, #f8fafc) !important;
+  border: 1px solid var(--rule, rgba(255,255,255,0.1));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+  border-radius: var(--r, 12px) !important;
+}
+.leaflet-popup-tip {
+  border: none !important;
+  box-shadow: none !important;
+}
+.leaflet-popup-content {
+  color: var(--ink, #f8fafc) !important;
+  margin: 10px 14px !important;
+  font-family: var(--sans) !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+.leaflet-popup-content .map-popup-title {
+  color: var(--ink, #f8fafc) !important;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.leaflet-popup-content .map-popup-row span {
+  color: var(--ink-dim, #cbd5e1) !important;
+}
+.leaflet-popup-content .map-popup-row strong {
+  color: var(--ink, #f8fafc) !important;
+}
+/* Close button */
+.leaflet-popup-close-button {
+  color: var(--ink-mute, #94a3b8) !important;
+  font-size: 18px !important;
+}
+.leaflet-popup-close-button:hover {
+  color: var(--ink, #f8fafc) !important;
+}
+
+/* Light theme: popup should be white with dark text */
+:root[data-theme="light"] .leaflet-popup-content-wrapper,
+:root[data-theme="light"] .leaflet-popup-tip {
+  background: #ffffff !important;
+  color: var(--ink) !important;
+  border-color: var(--rule) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+}
+:root[data-theme="light"] .leaflet-popup-content {
+  color: var(--ink) !important;
+}
+
 
 /* ------------------------------------------------------- reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
