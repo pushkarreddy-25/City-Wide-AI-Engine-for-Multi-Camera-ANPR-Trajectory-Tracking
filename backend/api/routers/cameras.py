@@ -44,12 +44,13 @@ def upload_video_endpoint(
     if camera_id not in cams:
         raise HTTPException(status_code=404, detail=f"Camera '{camera_id}' not found in configuration.")
 
-    # Save uploaded file to a temporary file
+    # Save uploaded file to a temporary file using chunked streaming
+    import shutil
     temp_dir = tempfile.gettempdir()
     temp_path = os.path.join(temp_dir, f"upload_{camera_id}_{file.filename}")
     try:
         with open(temp_path, "wb") as f:
-            f.write(file.file.read())
+            shutil.copyfileobj(file.file, f)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
 
@@ -65,15 +66,25 @@ def upload_video_endpoint(
         if not fps or fps <= 0:
             fps = 30.0
 
-        # Initialize ProcessingPipeline with real YOLO engine
+        # Initialize ProcessingPipeline with safe fallback engine
         pipeline = ProcessingPipeline(cameras=cams)
         from anpr_module.engine import ANPREngine
-        # Force real AI engines for uploaded videos regardless of current system mode
-        pipeline.engine = ANPREngine(config={
-            "detection": {"engine": "yolo", "model_path": "yolov8n.pt", "confidence_threshold": 0.5, "device": "cpu"},
-            "ocr": {"engine": "easyocr", "languages": ["en"], "confidence_threshold": 0.5},
-            "attributes": {"engine": "histogram"}
-        })
+        from utils.config import get_anpr_config
+        anpr_cfg = get_anpr_config()
+        
+        # Only instantiate heavy YOLO/EasyOCR engines if explicitly configured and hardware allows
+        try:
+            if anpr_cfg.get("detection", {}).get("engine") == "yolo":
+                pipeline.engine = ANPREngine(config={
+                    "detection": {"engine": "yolo", "model_path": "yolov8n.pt", "confidence_threshold": 0.5, "device": "cpu"},
+                    "ocr": {"engine": "easyocr", "languages": ["en"], "confidence_threshold": 0.5},
+                    "attributes": {"engine": "histogram"}
+                })
+            else:
+                pipeline.engine = ANPREngine(config=anpr_cfg)
+        except Exception:
+            pipeline.engine = ANPREngine(config=anpr_cfg)
+
         all_detections = []
         all_violations = []
 
