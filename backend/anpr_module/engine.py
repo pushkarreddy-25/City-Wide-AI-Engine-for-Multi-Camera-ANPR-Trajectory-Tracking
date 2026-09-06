@@ -4,8 +4,16 @@ The engine is config-driven. In the default (mock) configuration every stage
 runs without external dependencies; swapping engine values in
 ``config/anpr_config.yaml`` transparently upgrades to real models.
 """
+import base64
 import random
 from typing import List, Optional
+
+try:
+    import cv2
+    import numpy as np
+except ImportError:
+    cv2 = None
+    np = None
 
 from anpr_module.attributes import HistogramColorClassifier, MockAttributeClassifier
 from anpr_module.base import VehicleDetection
@@ -81,15 +89,12 @@ class ANPREngine:
                 "speed_kmh": det.get("speed_kmh"),
                 "_source": det,
             }
-            import numpy as np
-            if isinstance(frame, np.ndarray):
-                import cv2
-                import base64
+            if np is not None and isinstance(frame, np.ndarray):
                 x1, y1, x2, y2 = map(int, det["bbox"])
                 h, w = frame.shape[:2]
                 x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
                 crop = frame[y1:y2, x1:x2]
-                if crop.size > 0:
+                if crop.size > 0 and cv2 is not None:
                     _, buffer = cv2.imencode('.jpg', crop)
                     res["image_base64"] = base64.b64encode(buffer).decode('utf-8')
             results.append(res)
