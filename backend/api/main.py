@@ -13,13 +13,16 @@ in :mod:`api.security` — see that module for the environment variables that
 tune it. The defaults are safe with no configuration at all.
 """
 import os
+import re
 import asyncio
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from api import security
 from api.routers import analytics, cameras, vehicles, violations, ws, system
@@ -29,7 +32,93 @@ from simulation import TrafficSimulator
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
+BASE_URL = os.getenv("BASE_URL", "https://city-wide-ai-engine-for-multi-camera.onrender.com")
+
 simulator: TrafficSimulator | None = None
+
+# ── Social-media / link-preview crawler user-agent patterns ──────────────
+_BOT_UA_RE = re.compile(
+    r"bot|crawl|spider|slurp|facebookexternalhit|Facebot|"
+    r"LinkedInBot|Twitterbot|WhatsApp|TelegramBot|Discordbot|"
+    r"Slackbot|Pinterestbot|Applebot|Google-Read-Aloud|"
+    r"Embedly|Quora Link Preview|Showyoubot|outbrain|"
+    r"Baiduspider|YandexBot|Sogou|vkShare|redditbot|W3C_Validator|"
+    r"Iframely|fetch|preview|HeadlessChrome|PetalBot|SemrushBot|"
+    r"OGP|OpenGraph|Postman|curl|wget|python-requests|httpx|aiohttp",
+    re.IGNORECASE,
+)
+
+# Lightweight HTML page returned to crawlers. Contains only the OG / Twitter
+# meta tags — no JavaScript, no CSS, no framework bundles. This loads in
+# milliseconds even during a Render cold-start, which is critical because
+# most social-media crawlers time out after 5 seconds.
+_OG_HTML = f"""<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Primary Meta Tags -->
+<title>City-Wide AI Engine for Multi-Camera Surveillance</title>
+<meta name="title" content="City-Wide AI Engine for Multi-Camera Surveillance" />
+<meta name="description" content="AI-powered multi-camera video analytics for intelligent city-wide surveillance, real-time monitoring, and automated video intelligence." />
+<meta name="robots" content="index, follow" />
+<meta name="author" content="ANPR Traffic Intelligence" />
+<meta name="theme-color" content="#0a1628" />
+<link rel="canonical" href="{BASE_URL}/" />
+
+<!-- Open Graph / Facebook / WhatsApp / LinkedIn / Discord / Telegram -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{BASE_URL}/" />
+<meta property="og:title" content="City-Wide AI Engine for Multi-Camera Surveillance" />
+<meta property="og:description" content="AI-powered multi-camera video analytics for intelligent city-wide surveillance, real-time monitoring, and automated video intelligence." />
+<meta property="og:image" content="{BASE_URL}/preview.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:site_name" content="ANPR Traffic Intelligence Engine" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content="{BASE_URL}/" />
+<meta name="twitter:title" content="City-Wide AI Engine for Multi-Camera Surveillance" />
+<meta name="twitter:description" content="AI-powered multi-camera video analytics for intelligent city-wide surveillance, real-time monitoring, and automated video intelligence." />
+<meta name="twitter:image" content="{BASE_URL}/preview.jpg" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/jpeg" href="/favicon.jpg" />
+<link rel="apple-touch-icon" href="/favicon.jpg" />
+</head>
+<body>
+<h1>City-Wide AI Engine for Multi-Camera Surveillance</h1>
+<p>AI-powered multi-camera video analytics for intelligent city-wide surveillance, real-time monitoring, and automated video intelligence.</p>
+</body>
+</html>"""
+
+
+class CrawlerOGMiddleware(BaseHTTPMiddleware):
+    """Intercept social-media crawlers and serve a lightweight OG-only page.
+
+    Regular browser requests pass through untouched to the SPA. Crawlers get
+    a tiny HTML response that contains all the Open Graph and Twitter Card
+    metadata they need — no JS, no CSS, no 180 KB vendor bundle.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        # Only intercept GET on the root path (the page being shared).
+        if request.method == "GET" and request.url.path in ("/", ""):
+            ua = (request.headers.get("user-agent") or "")
+            if _BOT_UA_RE.search(ua):
+                return HTMLResponse(
+                    content=_OG_HTML,
+                    status_code=200,
+                    headers={
+                        "Cache-Control": "public, max-age=3600",
+                        "X-Robots-Tag": "all",
+                    },
+                )
+        return await call_next(request)
 
 
 def create_app() -> FastAPI:
@@ -59,6 +148,10 @@ def create_app() -> FastAPI:
     app.add_middleware(security.RateLimitMiddleware)
     app.add_middleware(security.SecurityHeadersMiddleware)
 
+    # Crawler middleware sits inside all the security layers so it benefits
+    # from rate-limiting and CORS headers but intercepts before the router.
+    app.add_middleware(CrawlerOGMiddleware)
+
     for module in (cameras, vehicles, violations, analytics, ws, system):
         app.include_router(module.router)
 
@@ -68,6 +161,27 @@ def create_app() -> FastAPI:
         return {"status": "ok", "simulator_running": running,
                 "history_seeded": bool(simulator and simulator.seeded),
                 **security.public_config()}
+
+    # ── Explicit routes for OG assets (bypass StaticFiles race) ──────────
+    @app.get("/preview.jpg", include_in_schema=False)
+    def serve_preview():
+        path = os.path.join(STATIC_DIR, "preview.jpg")
+        if os.path.isfile(path):
+            return FileResponse(
+                path, media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+        return HTMLResponse("Not found", status_code=404)
+
+    @app.get("/favicon.jpg", include_in_schema=False)
+    def serve_favicon():
+        path = os.path.join(STATIC_DIR, "favicon.jpg")
+        if os.path.isfile(path):
+            return FileResponse(
+                path, media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+        return HTMLResponse("Not found", status_code=404)
 
     @app.on_event("startup")
     async def _start_health_logger():
@@ -134,3 +248,4 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
