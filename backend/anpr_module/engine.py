@@ -63,10 +63,9 @@ class ANPREngine:
         """
         # Protect against cross-mode queue pollution: drop frames meant for the other engine type.
         is_mock = self.detector.__class__.__name__ == "MockDetector"
-        # Mock frames are lists of dicts. YOLO frames are numpy arrays.
-        if is_mock and not isinstance(frame, list):
-            return []
         if not is_mock and isinstance(frame, list):
+            return []
+        if frame is None:
             return []
             
         results = []
@@ -82,7 +81,8 @@ class ANPREngine:
                 "speed_kmh": det.get("speed_kmh"),
                 "_source": det,
             }
-            if not is_mock:
+            import numpy as np
+            if isinstance(frame, np.ndarray):
                 import cv2
                 import base64
                 x1, y1, x2, y2 = map(int, det["bbox"])
