@@ -123,7 +123,37 @@ export const api = {
   stats: () => req("/api/stats"),
   health: () => req("/health"),
   diagnostics: () => req("/api/system/diagnostics"),
+
+  // System mode & telemetry
+  system: {
+    mode: () => req("/api/system/mode"),
+    setMode: (mode) => req("/api/system/mode", { method: "POST", headers: writeHeaders(), body: JSON.stringify({ mode }) }),
+    telemetry: () => req("/api/system/telemetry"),
+  },
+  getMode: () => req("/api/system/mode"),
+  setMode: (mode) => req("/api/system/mode", { method: "POST", headers: writeHeaders(), body: JSON.stringify({ mode }) }),
+  telemetry: () => req("/api/system/telemetry"),
+
+  // Incidents management
+  incidents: {
+    list: (params) => req(`/api/incidents${qs(params)}`),
+    create: (payload) => req("/api/incidents", { method: "POST", headers: writeHeaders(), body: JSON.stringify(payload) }),
+    update: (id, payload) => req(`/api/incidents/${encodeURIComponent(id)}`, { method: "PATCH", headers: writeHeaders(), body: JSON.stringify(payload) }),
+  },
+
+  // Security audit trail
+  auditLogs: {
+    list: (params) => req(`/api/audit-logs${qs(params)}`),
+    create: (payload) => req("/api/audit-logs", { method: "POST", headers: writeHeaders(), body: JSON.stringify(payload) }),
+  },
+
+  // AI Multi-Model Provider Router
+  ai: {
+    models: () => req("/api/ai/models"),
+    routeQuery: (prompt) => req("/api/ai/route-query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) }),
+  },
 };
+
 
 // Export links (opened directly by the browser, so they need the full URL)
 export const exportUrls = {

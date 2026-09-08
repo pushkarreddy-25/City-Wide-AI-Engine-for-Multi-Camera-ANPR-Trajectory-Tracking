@@ -20,7 +20,7 @@ detection:
   confidence_threshold: 0.5
   device: cpu
   engine: mock
-  model_path: yolov8s.pt
+  model_path: yolo11n.pt
 ocr:
   confidence_threshold: 0.7
   engine: mock

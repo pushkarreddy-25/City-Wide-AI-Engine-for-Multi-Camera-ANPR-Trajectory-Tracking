@@ -9,11 +9,11 @@ export const TYPE_LABEL = {
 };
 
 export const TYPE_COLOR = {
-  red_light: "#ff3b47",
-  over_speed: "#ffb020",
-  speeding: "#ffb020",
-  wrong_lane: "#00e5d0",
-  parking_violation: "#8d6bff",
+  red_light: "#A63D40",
+  over_speed: "#C56A2D",
+  speeding: "#C56A2D",
+  wrong_lane: "#4F6B45",
+  parking_violation: "#C56A2D",
 };
 
 /**

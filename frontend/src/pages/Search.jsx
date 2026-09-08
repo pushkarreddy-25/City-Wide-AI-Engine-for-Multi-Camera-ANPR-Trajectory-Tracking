@@ -64,10 +64,10 @@ function MapResizeObserver() {
 }
 
 const VIO_COLOR = {
-  red_light: "#ff3b47",
-  over_speed: "#ffb020",
-  speeding: "#ffb020",
-  wrong_lane: "#00e5d0",
+  red_light: "#A63D40",
+  over_speed: "#C56A2D",
+  speeding: "#C56A2D",
+  wrong_lane: "#4F6B45",
 };
 
 /* ──────────────────────────────────────────────
@@ -133,8 +133,8 @@ function JourneyMap({ sightings = [], violations = [] }) {
         <Polyline
           positions={coords}
           pathOptions={{
-            color: "#3b82f6",
-            weight: 6,
+            color: "#4F6B45",
+            weight: 5,
             opacity: 0.9,
             className: "journey-route-line"
           }}
@@ -146,13 +146,13 @@ function JourneyMap({ sightings = [], violations = [] }) {
           const isFirst = point.index === 0;
           const isLast = point.index === points.length - 1;
           
-          // Color coding matching the user's screenshot:
-          // Start point = Blue, End point = Red, Intermediate points = Orange
+          // Color coding for journey route:
+          // Start point = Olive Green (#4F6B45), End point = Burgundy (#A63D40), Intermediate = Terracotta (#C56A2D)
           const markerColor = isFirst
-            ? "#3b82f6" // Blue
+            ? "#4F6B45"
             : isLast
-            ? "#ef4444" // Red
-            : "#f97316"; // Orange
+            ? "#A63D40"
+            : "#C56A2D";
             
           // Start dot is slightly smaller in the screenshot (e.g. 18px), others are 24px
           const size = isFirst ? 18 : 24;

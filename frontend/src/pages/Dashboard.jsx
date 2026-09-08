@@ -7,16 +7,16 @@ import { api } from "../services/api.js";
 function VehicleSVG({ color = "White" }) {
   const colorMap = {
     White: "#ffffff",
-    Black: "#1e293b",
-    Red: "#ef4444",
-    Blue: "#0066cc",
-    Silver: "#cbd5e1",
-    Grey: "#64748b",
-    Green: "#16a34a",
-    Yellow: "#eab308",
+    Black: "#252525",
+    Red: "#A63D40",
+    Blue: "#4F6B45",
+    Silver: "#D5D0C5",
+    Grey: "#6B6A63",
+    Green: "#4F6B45",
+    Yellow: "#C56A2D",
   };
-  const fillColor = colorMap[color] || "#cbd5e1";
-  const strokeColor = color === "White" ? "#cbd5e1" : "transparent";
+  const fillColor = colorMap[color] || "#D5D0C5";
+  const strokeColor = color === "White" ? "#D5D0C5" : "transparent";
 
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid var(--rule)", marginBottom: "12px" }}>
@@ -25,17 +25,19 @@ function VehicleSVG({ color = "White" }) {
           {/* Main Car Body */}
           <path d="M 15 30 L 10 28 L 8 20 Q 12 12 30 11 L 90 11 Q 108 12 112 20 L 110 28 L 105 30 Z" />
           {/* Roof & Windows */}
-          <path d="M 32 12 L 42 3 L 78 3 L 88 12 Z" fill="#94a3b8" opacity="0.4" />
+          <path d="M 32 12 L 42 3 L 78 3 L 88 12 Z" fill="#6B6A63" opacity="0.4" />
           {/* Wheels */}
-          <circle cx="28" cy="30" r="9" fill="#0f172a" />
-          <circle cx="28" cy="30" r="4" fill="#64748b" />
-          <circle cx="92" cy="30" r="9" fill="#0f172a" />
-          <circle cx="92" cy="30" r="4" fill="#64748b" />
+          <circle cx="28" cy="30" r="9" fill="#252525" />
+          <circle cx="28" cy="30" r="4" fill="#6B6A63" />
+          <circle cx="92" cy="30" r="9" fill="#252525" />
+          <circle cx="92" cy="30" r="4" fill="#6B6A63" />
         </g>
       </svg>
     </div>
   );
 }
+
+import ThreeDCarViewer from "../components/ThreeDCarViewer.jsx";
 
 export function Dashboard({ cameras, snapshot, feed, openModal }) {
   const { vehicles = [], congestion = [], stats = {} } = snapshot;
@@ -44,6 +46,8 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
   const [selectedJourney, setSelectedJourney] = useState(null);
   const [mapLayers, setMapLayers] = useState({ traffic: true, cameras: true, anpr: true, incidents: true });
   const [mapOverlaySearch, setMapOverlaySearch] = useState("");
+  const [is3DOpen, setIs3DOpen] = useState(false);
+  const [threeDVehicle, setThreeDVehicle] = useState(null);
 
   // Track full journey trajectory details of selected plate
   useEffect(() => {
@@ -55,6 +59,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
       setSelectedJourney(null);
     }
   }, [selectedPlate]);
+
 
   // Derive city statistics
   const avgSpeed = useMemo(() => {
@@ -230,7 +235,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                       type="checkbox"
                       checked={mapLayers[layer]}
                       onChange={() => setMapLayers(p => ({ ...p, [layer]: !p[layer] }))}
-                      style={{ borderRadius: "4px", accentColor: "#0066cc" }}
+                      style={{ borderRadius: "4px", accentColor: "#4F6B45" }}
                     />
                     <span style={{ textTransform: "capitalize" }}>{layer}</span>
                   </label>
@@ -245,10 +250,10 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
           
           {selectedPlate ? (
             /* Selected Vehicle Profile (Vehicle Intelligence) */
-            <section className="panel selected-vehicle-panel" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px", border: "2px solid #0066cc" }}>
+            <section className="panel selected-vehicle-panel" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px", border: "2px solid var(--cyan)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--rule)", paddingBottom: "10px" }}>
                 <div>
-                  <h3 className="eyebrow" style={{ fontSize: "10.5px", color: "#0066cc", letterSpacing: "0.1em", textTransform: "uppercase" }}>Vehicle Profile</h3>
+                  <h3 className="eyebrow" style={{ fontSize: "10.5px", color: "var(--cyan)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Vehicle Profile</h3>
                   <strong style={{ fontSize: "18px", color: "var(--ink)" }}>VEHICLE INTELLIGENCE</strong>
                 </div>
                 <button 
@@ -272,7 +277,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                 <>
                   {selectedJourney.image_base64 ? (
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid var(--rule)", marginBottom: "12px", minHeight: "84px" }}>
-                      <img src={`data:image/jpeg;base64,${selectedJourney.image_base64}`} alt="Vehicle crop" style={{ maxWidth: "100%", maxHeight: "120px", borderRadius: "4px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
+                      <img src={`data:image/jpeg;base64,${selectedJourney.image_base64}`} alt="Vehicle crop" style={{ maxWidth: "100%", maxHeight: "120px", borderRadius: "4px" }} />
                     </div>
                   ) : (
                     <VehicleSVG color={selectedJourney.color || "White"} />
@@ -281,7 +286,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
                       <span style={{ fontSize: "12px", color: "var(--ink-dim)" }}>License Plate</span>
-                      <code style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: "700", color: "#0066cc" }}>{selectedJourney.plate}</code>
+                      <code style={{ fontFamily: "var(--sans)", fontSize: "14px", fontWeight: "700", color: "var(--cyan)" }}>{selectedJourney.plate}</code>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
@@ -334,14 +339,14 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
             /* Live Detections feed card */
             <section className="panel" style={{ padding: "16px" }}>
               <div style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "8px", marginBottom: "12px" }}>
-                <h3 className="eyebrow" style={{ fontSize: "10.5px", color: "#0066cc", letterSpacing: "0.1em", textTransform: "uppercase" }}>Live Stream Ingestion</h3>
+                <h3 className="eyebrow" style={{ fontSize: "10.5px", color: "var(--cyan)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Live Stream Ingestion</h3>
                 <strong style={{ fontSize: "15px", color: "var(--ink)", display: "block" }}>LATEST ANPR DETECTION</strong>
               </div>
 
               {latestDetection ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {latestDetection.image_base64 ? (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid #00ffaa", boxShadow: "0 0 15px rgba(0, 255, 170, 0.4)", marginBottom: "12px", minHeight: "84px" }}>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", background: "var(--void)", borderRadius: "10px", padding: "12px", border: "1px solid var(--rule)", marginBottom: "12px", minHeight: "84px" }}>
                       <img src={`data:image/jpeg;base64,${latestDetection.image_base64}`} alt="Vehicle crop" style={{ maxWidth: "100%", maxHeight: "120px", borderRadius: "4px" }} />
                     </div>
                   ) : (
@@ -350,7 +355,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                   
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
                     <span style={{ fontSize: "12px", color: "var(--ink-dim)" }}>Detected License Plate</span>
-                    <code style={{ fontFamily: "var(--mono)", fontSize: "15px", fontWeight: "700", color: "#0066cc" }}>{latestDetection.plate_text || latestDetection.plate}</code>
+                    <code style={{ fontFamily: "var(--sans)", fontSize: "15px", fontWeight: "700", color: "var(--cyan)" }}>{latestDetection.plate_text || latestDetection.plate}</code>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "12px" }}>
@@ -364,23 +369,14 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                     </div>
                   </div>
 
-                  <div style={{ background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)", display: "flex", flexDirection: "column", gap: "4px", fontSize: "11.5px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--ink-dim)" }}>OCR Confidence</span>
-                      <strong style={{ color: "var(--ink)" }}>{latestDetection.plate_confidence ? `${Math.round(latestDetection.plate_confidence * 100)}%` : "98.7%"}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--ink-dim)" }}>Camera Source</span>
-                      <strong style={{ color: "var(--ink)" }}>{latestDetection.camera_id || "JN-042"}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--ink-dim)" }}>Detected Speed</span>
-                      <strong style={{ color: "var(--ink)" }}>{latestDetection.speed_kmh ? `${Math.round(latestDetection.speed_kmh)} km/h` : "—"}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "var(--ink-dim)" }}>Status</span>
-                      <strong style={{ color: "var(--green)" }}>✓ Clear (No Watchlist Match)</strong>
-                    </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
+                    <span style={{ color: "var(--ink-dim)" }}>OCR Engine Confidence</span>
+                    <strong style={{ color: "var(--cyan)" }}>{((latestDetection.confidence || 0.95) * 100).toFixed(1)}%</strong>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", background: "var(--void)", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--rule)" }}>
+                    <span style={{ color: "var(--ink-dim)" }}>Detection Camera Node</span>
+                    <strong style={{ color: "var(--ink)" }}>{latestDetection.camera_name || "CAM-001"}</strong>
                   </div>
 
                   <button 
@@ -388,7 +384,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                     style={{
                       width: "100%",
                       height: "36px",
-                      background: "#0066cc",
+                      background: "var(--cyan)",
                       color: "#ffffff",
                       borderRadius: "8px",
                       fontSize: "12px",
@@ -420,7 +416,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                 <div key={idx} style={{
                   flex: 1,
                   height: `${val}%`,
-                  background: idx === 13 ? "#0066cc" : "rgba(0, 102, 204, 0.15)",
+                  background: idx === 13 ? "var(--cyan)" : "var(--cyan-wash)",
                   borderRadius: "2px",
                   transition: "height .3s"
                 }} title={`${val} vehicles/min`} />
@@ -450,7 +446,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
                       <div style={{
                         height: "100%",
                         width: `${pct}%`,
-                        background: type === "Car" ? "#0066cc" : type === "Truck" ? "#d97706" : type === "Motorcycle" ? "#16a34a" : "#94a3b8"
+                        background: type === "Car" ? "var(--cyan)" : type === "Truck" ? "var(--amber)" : type === "Motorcycle" ? "var(--cyan-soft)" : "var(--ink-mute)"
                       }} />
                     </div>
                   </div>
@@ -466,7 +462,7 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
               {cameras.slice(0, 3).map((cam) => (
                 <div key={cam.id} style={{ display: "flex", gap: "10px", background: "var(--void)", border: "1px solid var(--rule)", borderRadius: "8px", padding: "8px", alignItems: "center" }}>
                   <div style={{ position: "relative", width: "60px", height: "40px", borderRadius: "4px", overflow: "hidden", background: "var(--ink-mute)", flexShrink: 0 }}>
-                    <div style={{ width: "100%", height: "100%", background: "#475569" }} />
+                    <div style={{ width: "100%", height: "100%", background: "var(--ink-mute)" }} />
                     <span style={{ position: "absolute", top: "2px", left: "2px", fontSize: "7px", background: "var(--red)", color: "#fff", padding: "1px 3px", borderRadius: "2px", fontWeight: "700" }}>LIVE</span>
                   </div>
                   <div style={{ minWidth: 0 }}>
@@ -480,18 +476,19 @@ export function Dashboard({ cameras, snapshot, feed, openModal }) {
         </aside>
       </div>
 
+      <ThreeDCarViewer
+        isOpen={is3DOpen}
+        onClose={() => setIs3DOpen(false)}
+        vehicleData={threeDVehicle}
+      />
+
       <style>{`
-        @keyframes pulse {
-          0% { transform: scale(0.95); opacity: 0.5; }
-          50% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(0.95); opacity: 0.5; }
-        }
         .btn-view-profile:hover {
-          background: #0052a3 !important;
+          background: var(--cyan-soft) !important;
         }
         .feed-item:hover {
-          border-color: #0066cc !important;
-          background: rgba(0, 102, 204, 0.02) !important;
+          border-color: var(--cyan) !important;
+          background: var(--void) !important;
         }
       `}</style>
     </section>

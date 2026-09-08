@@ -57,8 +57,12 @@ API_KEY_HEADER = "X-API-Key"
 #: dashboard is served from the API itself, so it is same-origin and needs none.
 DEV_ORIGINS = [
     "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:5174", "http://127.0.0.1:5174",
+    "http://localhost:4173", "http://127.0.0.1:4173",
+    "http://localhost:3000", "http://127.0.0.1:3000",
     "http://localhost:8000", "http://127.0.0.1:8000",
 ]
+
 
 #: Prefixes whose handlers scan or aggregate unbounded row counts. They get a
 #: much tighter budget than ordinary reads.
@@ -175,6 +179,8 @@ def cors_settings() -> dict:
         "allow_headers": ["Content-Type", "Authorization", API_KEY_HEADER],
         "max_age": 600,
     }
+
+
 
 
 def allowed_hosts() -> Optional[List[str]]:

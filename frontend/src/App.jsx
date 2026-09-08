@@ -16,6 +16,11 @@ const Search = lazy(() => import("./pages/Search.jsx").then(m => ({ default: m.S
 const Reports = lazy(() => import("./pages/Reports.jsx").then(m => ({ default: m.Reports })));
 const Settings = lazy(() => import("./pages/Settings.jsx").then(m => ({ default: m.Settings })));
 const Upload = lazy(() => import("./pages/Upload.jsx").then(m => ({ default: m.Upload })));
+const SystemHealth = lazy(() => import("./pages/SystemHealth.jsx"));
+const Incidents = lazy(() => import("./pages/Incidents.jsx"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs.jsx"));
+const AIModels = lazy(() => import("./pages/AIModels.jsx"));
+import GlobalSearchModal from "./components/GlobalSearchModal.jsx";
 
 export function App() {
   const location = useLocation();
@@ -24,6 +29,18 @@ export function App() {
   const [cameras, setCameras] = useState([]);
   const [theme, setTheme] = useState(() => localStorage.getItem("anpr-theme") || "dark");
   const [bootState, setBootState] = useState("loading");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   useEffect(() => {
     const t1 = setTimeout(() => setBootState("welcome"), 2500);
@@ -67,7 +84,7 @@ export function App() {
         transition: "opacity 0.8s ease-in", 
         pointerEvents: bootState === "ready" ? "auto" : "none" 
       }}>
-      <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} />
+      <Topbar status={status} stats={snapshot.stats} theme={theme} toggleTheme={toggleTheme} onOpenSearch={() => setIsSearchOpen(true)} />
       <Sidebar openViolations={openViolations} />
       <main className="content">
         <Suspense fallback={<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-mute)", minHeight: "100%" }}>Loading interface...</div>}>
@@ -78,11 +95,17 @@ export function App() {
               <Route path="/search" element={<PageWrapper><Search /></PageWrapper>} />
               <Route path="/reports" element={<PageWrapper><Reports /></PageWrapper>} />
               <Route path="/upload" element={<PageWrapper><Upload cameras={cameras} /></PageWrapper>} />
+              <Route path="/incidents" element={<PageWrapper><Incidents /></PageWrapper>} />
+              <Route path="/system-health" element={<PageWrapper><SystemHealth /></PageWrapper>} />
+              <Route path="/audit-logs" element={<PageWrapper><AuditLogs /></PageWrapper>} />
+              <Route path="/ai-models" element={<PageWrapper><AIModels /></PageWrapper>} />
               <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
             </Routes>
           </AnimatePresence>
         </Suspense>
       </main>
+
+      <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {modalViolation && (
         <ViolationModal
@@ -95,3 +118,4 @@ export function App() {
     </>
   );
 }
+

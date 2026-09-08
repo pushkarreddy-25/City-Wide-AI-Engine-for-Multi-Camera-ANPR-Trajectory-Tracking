@@ -23,11 +23,11 @@ function MapResizeObserver() {
 
 
 function densityColor(count) {
-  if (count >= 9) return "#dc2626"; // Premium red
-  if (count >= 5) return "#d97706"; // Premium amber
-  if (count >= 2) return "#0066cc"; // Premium blue
-  if (count > 0) return "#16a34a"; // Premium green
-  return "#94a3b8"; // slate-400
+  if (count >= 9) return "#A63D40";
+  if (count >= 5) return "#C56A2D";
+  if (count >= 2) return "#4F6B45";
+  if (count > 0) return "#4F6B45";
+  return "#6B6A63";
 }
 
 function densityRadius(count) {
@@ -122,7 +122,7 @@ export const LiveMap = memo(function LiveMap({ cameras = [], vehicles = [], sele
           <Polyline
             positions={selectedJourney.map(s => [s.position.lat, s.position.lng])}
             pathOptions={{
-              color: "#0066cc", // Primary blue path
+              color: "#4F6B45",
               weight: 5,
               opacity: 0.9,
             }}
@@ -130,7 +130,7 @@ export const LiveMap = memo(function LiveMap({ cameras = [], vehicles = [], sele
           {selectedJourney.map((s, idx) => {
             const isFirst = idx === 0;
             const isLast = idx === selectedJourney.length - 1;
-            const dotColor = isFirst ? "#0066cc" : isLast ? "#dc2626" : "#d97706";
+            const dotColor = isFirst ? "#4F6B45" : isLast ? "#A63D40" : "#C56A2D";
             const size = isFirst ? 14 : 18;
             const icon = L.divIcon({
               className: `journey-dot ${isLast ? 'pulsing-journey-dot-end' : 'pulsing-journey-dot'}`,

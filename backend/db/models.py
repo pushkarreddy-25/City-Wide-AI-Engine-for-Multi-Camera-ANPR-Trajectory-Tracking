@@ -173,3 +173,56 @@ class Violation(Base):
             "resolved": bool(self.resolved),
             "notes": self.notes,
         }
+
+
+class Incident(Base):
+    __tablename__ = "incidents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(120), nullable=False)
+    description = Column(String(500))
+    severity = Column(String(20), default="Medium")
+    status = Column(String(20), default="Open", index=True)
+    camera_id = Column(String(50), ForeignKey("cameras.id"))
+    camera_name = Column(String(120))
+    assigned_unit = Column(String(80))
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": f"inc_{self.id}",
+            "title": self.title,
+            "description": self.description,
+            "severity": self.severity,
+            "status": self.status,
+            "camera_id": self.camera_id,
+            "camera_name": self.camera_name,
+            "assigned_unit": self.assigned_unit,
+            "created_at": _iso(self.created_at),
+            "updated_at": _iso(self.updated_at),
+        }
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    user = Column(String(50), default="operator_1")
+    action = Column(String(100), nullable=False)
+    resource = Column(String(100))
+    details = Column(String(500))
+    ip_address = Column(String(45), default="127.0.0.1")
+
+    def to_dict(self):
+        return {
+            "id": f"aud_{self.id}",
+            "timestamp": _iso(self.timestamp),
+            "user": self.user,
+            "action": self.action,
+            "resource": self.resource,
+            "details": self.details,
+            "ip_address": self.ip_address,
+        }
+

@@ -19,23 +19,33 @@ class MockDetector(BaseDetector):
         self.miss_rate = miss_rate
 
     def detect(self, frame) -> List[dict]:
-        # Handle real video frame matrices (numpy arrays) by generating simulated detections
+        # Handle real video frame matrices (numpy arrays) with 100% deterministic frame hashing
         import numpy as np
+        import hashlib
         if isinstance(frame, np.ndarray) or (frame is not None and not isinstance(frame, list)):
-            if self.rng.random() < 0.90:  # 90% chance of detecting vehicle(s) in video frames
+            if hasattr(frame, "tobytes"):
+                frame_sample = frame.tobytes()[::3000]
+                frame_seed = int(hashlib.md5(frame_sample).hexdigest(), 16)
+                rng = random.Random(frame_seed)
+            else:
+                rng = self.rng
+
+            if rng.random() < 0.92:  # High-confidence detection for traffic frames
                 h, w = (frame.shape[0], frame.shape[1]) if hasattr(frame, "shape") and len(frame.shape) >= 2 else (720, 1280)
-                num_vehicles = 1 if self.rng.random() < 0.65 else 2
+                num_vehicles = 1 if rng.random() < 0.65 else 2
                 res_dets = []
                 for i in range(num_vehicles):
                     states = ["MH", "DL", "KA", "TN", "UP", "HR", "GJ"]
-                    state = self.rng.choice(states)
-                    district = f"{self.rng.randint(1, 99):02d}"
-                    series = "".join(self.rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
-                    num = f"{self.rng.randint(1, 9999):04d}"
-                    random_plate = f"{state}-{district}-{series}-{num}"
+                    state = states[rng.randint(0, len(states) - 1)]
+                    district = f"{rng.randint(1, 99):02d}"
+                    series = "".join(rng.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ") for _ in range(2))
+                    num = f"{rng.randint(1, 9999):04d}"
+                    deterministic_plate = f"{state}-{district}-{series}-{num}"
                     
                     colors = ["White", "Black", "Silver", "Blue", "Red", "Yellow", "Green"]
-                    random_color = self.rng.choice(colors)
+                    deterministic_color = colors[rng.randint(0, len(colors) - 1)]
+                    vehicle_types = ["Car", "SUV", "Truck", "Bus", "Motorcycle"]
+                    deterministic_type = vehicle_types[rng.randint(0, len(vehicle_types) - 1)]
 
                     x1 = int(w * (0.15 + i * 0.4))
                     y1 = int(h * 0.3)
@@ -44,23 +54,24 @@ class MockDetector(BaseDetector):
 
                     gt = {
                         "bbox": (x1, y1, x2, y2),
-                        "type": self.rng.choice(["Car", "SUV", "Truck", "Bus", "Motorcycle"]),
-                        "speed_kmh": round(self.rng.uniform(42.0, 78.0), 1),
-                        "_vid": self.rng.randint(1000, 9999),
+                        "type": deterministic_type,
+                        "speed_kmh": round(45.0 + (rng.randint(0, 350) / 10.0), 1),
+                        "_vid": rng.randint(1000, 9999),
                         "context": {},
-                        "plate": random_plate,
-                        "color": random_color,
+                        "plate": deterministic_plate,
+                        "color": deterministic_color,
                         "obscured": False
                     }
                     res_dets.append({
                         "bbox": gt["bbox"],
-                        "confidence": round(self.rng.uniform(0.88, 0.99), 3),
+                        "confidence": round(0.88 + (rng.randint(0, 100) / 1000.0), 3),
                         "vehicle_type": gt["type"],
                         "speed_kmh": gt["speed_kmh"],
                         "_ground_truth": gt,
                     })
                 return res_dets
             return []
+
 
         detections = []
         for gt in frame or []:
@@ -90,28 +101,61 @@ class YOLODetector(BaseDetector):
     deferred to keep mock mode dependency-free.
     """
 
-    def __init__(self, model_path: str = "yolov8s.pt",
+    def __init__(self, model_path: str = "yolo11n.pt",
                  confidence_threshold: float = 0.5, device: str = "cpu"):
         from ultralytics import YOLO  # noqa: heavy optional dependency
         self.model = YOLO(model_path)
         self.confidence_threshold = confidence_threshold
         self.device = device
 
-    def detect(self, frame) -> List[dict]:
-        # Optimize inference by reducing resolution and enabling half precision on GPU
+    def detect(self, frame, track: bool = False) -> List[dict]:
+        # Optimize inference by filtering vehicle classes directly and scaling to 640px
         half = self.device != "cpu"
-        results = self.model(frame, verbose=False, device=self.device, imgsz=480, half=half)
+        vehicle_classes = list(_COCO_VEHICLE_MAP.keys())
+        
+        if track:
+            results = self.model.track(
+                frame,
+                persist=True,
+                tracker="bytetrack.yaml",
+                classes=vehicle_classes,
+                conf=self.confidence_threshold,
+                device=self.device,
+                imgsz=640,
+                half=half,
+                verbose=False
+            )
+        else:
+            results = self.model(
+                frame,
+                classes=vehicle_classes,
+                conf=self.confidence_threshold,
+                device=self.device,
+                imgsz=640,
+                half=half,
+                verbose=False
+            )
+
         detections = []
         for r in results:
-            for box in r.boxes:
+            boxes = r.boxes
+            if boxes is None or len(boxes) == 0:
+                continue
+            
+            track_ids = boxes.id.int().cpu().tolist() if (boxes.id is not None) else [None] * len(boxes)
+            
+            for box, track_id in zip(boxes, track_ids):
                 cls = int(box.cls.item())
                 conf = float(box.conf.item())
-                if cls not in _COCO_VEHICLE_MAP or conf < self.confidence_threshold:
+                if cls not in _COCO_VEHICLE_MAP:
                     continue
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                detections.append({
+                det_dict = {
                     "bbox": (x1, y1, x2, y2),
                     "confidence": conf,
                     "vehicle_type": _COCO_VEHICLE_MAP[cls],
-                })
+                }
+                if track_id is not None:
+                    det_dict["track_id"] = f"track_{track_id}"
+                detections.append(det_dict)
         return detections

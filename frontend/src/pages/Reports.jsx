@@ -10,25 +10,25 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Le
 
 /* Chart.js draws to canvas, so it cannot read CSS custom properties — the HUD
    palette has to be repeated here. Keep these in step with theme.css. */
-const INK = "#7f939f";      // --ink-dim
-const GRID = "#18242f";     // --rule
-const ACCENT = "#00e5d0";   // --cyan
-const DECK = "#0a1017";     // --deck, used as the doughnut's separator
+const INK = "#6B6A63";      // --ink-mute
+const GRID = "#D5D0C5";     // --rule
+const ACCENT = "#4F6B45";   // --cyan
+const DECK = "#FFFFFF";     // --deck
 ChartJS.defaults.color = INK;
-ChartJS.defaults.font.family = "'Space Grotesk', system-ui, sans-serif";
-ChartJS.defaults.font.size = 11;
+ChartJS.defaults.font.family = "'Inter', system-ui, sans-serif";
+ChartJS.defaults.font.size = 11.5;
 ChartJS.defaults.borderColor = GRID;
 
-/* Tooltip styling — dark background so it reads well on the dark console */
-ChartJS.defaults.plugins.tooltip.backgroundColor = "#0f1923";
-ChartJS.defaults.plugins.tooltip.titleColor = "#f8fafc";
-ChartJS.defaults.plugins.tooltip.bodyColor = "#cbd5e1";
-ChartJS.defaults.plugins.tooltip.borderColor = "rgba(255,255,255,0.12)";
+/* Tooltip styling — warm light operational overlay */
+ChartJS.defaults.plugins.tooltip.backgroundColor = "#252525";
+ChartJS.defaults.plugins.tooltip.titleColor = "#FFFFFF";
+ChartJS.defaults.plugins.tooltip.bodyColor = "#E8E4DA";
+ChartJS.defaults.plugins.tooltip.borderColor = "#D5D0C5";
 ChartJS.defaults.plugins.tooltip.borderWidth = 1;
-ChartJS.defaults.plugins.tooltip.cornerRadius = 8;
-ChartJS.defaults.plugins.tooltip.padding = 10;
+ChartJS.defaults.plugins.tooltip.cornerRadius = 4;
+ChartJS.defaults.plugins.tooltip.padding = 8;
 ChartJS.defaults.plugins.tooltip.titleFont = { weight: "600", size: 12 };
-ChartJS.defaults.plugins.tooltip.bodyFont = { size: 11 };
+ChartJS.defaults.plugins.tooltip.bodyFont = { size: 11.5 };
 
 function Kpi({ label, value }) {
   return <div className="kpi"><div className="kpi-label">{label}</div><div className="kpi-val">{value}</div></div>;

@@ -16,6 +16,16 @@ import os
 import re
 import asyncio
 import logging
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    _backend_dir = Path(__file__).resolve().parent.parent
+    load_dotenv(_backend_dir / ".env")
+    load_dotenv(_backend_dir.parent / ".env")
+except Exception:
+    pass
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +35,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api import security
-from api.routers import analytics, cameras, vehicles, violations, ws, system
+from api.routers import analytics, cameras, vehicles, violations, ws, system, incidents, audit, ai_router
 from db.init_db import init_db
 from services.runtime_service import runtime_services
 from simulation import TrafficSimulator
@@ -35,6 +45,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 BASE_URL = os.getenv("BASE_URL", "https://city-wide-ai-engine-for-multi-camera.onrender.com")
 
 simulator: TrafficSimulator | None = None
+
 
 # ── Social-media / link-preview crawler user-agent patterns ──────────────
 _BOT_UA_RE = re.compile(
@@ -152,7 +163,7 @@ def create_app() -> FastAPI:
     # from rate-limiting and CORS headers but intercepts before the router.
     app.add_middleware(CrawlerOGMiddleware)
 
-    for module in (cameras, vehicles, violations, analytics, ws, system):
+    for module in (cameras, vehicles, violations, analytics, ws, system, incidents, audit, ai_router):
         app.include_router(module.router)
 
     @app.get("/health", tags=["system"], summary="Health check")

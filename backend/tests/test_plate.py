@@ -55,3 +55,12 @@ def test_plates_similar_tolerates_one_edit_by_default():
 def test_plates_similar_false_on_empty():
     assert not plates_similar("", "MH-31-AB-1234")
     assert not plates_similar("MH-31-AB-1234", None)
+
+
+def test_dual_ocr_engine_retry_validation():
+    from anpr_module.ocr import DualOCREngine
+    engine = DualOCREngine()
+    text, conf = engine.read(None, {})
+    assert is_valid_plate(text)
+    assert conf >= 0.5
+
